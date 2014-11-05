@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="card_name">Card name</string>
+    <string name="name_on_card">Name on Card</string>
+    <string name="card_number">Card Number</string>
+    <string name="expires">Expiry</string>
+    <string name="cvv">CVV</string>
+    <string name="enter_card_details">Enter card Details</string>
+    <string name="pay_now">Pay Now</string>
+    <string name="pay_by_cash_card">Pay by Cash Card</string>
+    <string name="delete_card">Delete card</string>
+    <string name="edit_card">Edit card</string>
+    <string name="pay_by_emi">Pay by Emi</string>
+    <string name="select_payment_method">Select your preferred payment method</string>
+    <string name="credit_card">Credit card</string>
+    <string name="debit_card">Debit card</string>
+    <string name="save_card">Save card</string>
+    <string name="select_save_card">Select a saved card or use a new one</string>
+    <string name="use_new_card">New card</string>
+    <string name="no_card_found">No card found!</string>
+    <string name="netbankingNote">Note: In the next step you will be redirect to your bank website to verify your account</string>
+    <string name="cashCardNote">Note: In the next step you will be redirected to your bank\'s website to verify yourself.</string>
+    <string name="click_here">Click here</string>
+    <string name="if_cvv_and_expiry_on_card">if you have CVV and Expiry on your card</string>
+    <string name="please_wait">Please Wait</string>
+    <string name="something_went_wrong">Something went wrong</string>
+    <string name="status">Status</string>
+    <string name="amount"> Rs. %1$,.2f</string>
+    <string name="eligible_for_discount">Congrats! You are eligible for a discount of Rs. %1$f</string>
+    <string name="enter_credit_card_details">Please enter credit card details</string>
+    <string name="enter_debit_card_details">Please enter debit card details</string>
+
+</resources>
