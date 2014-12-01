@@ -24,16 +24,6 @@
         android:layout_marginBottom="1dp"
         android:padding="3dp"/>
 
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/cardNameEditText"
-        android:hint="@string/card_name"
-        android:background="@drawable/box"
-        android:digits="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 "
-        android:visibility="gone"
-        android:layout_marginBottom="1dp"
-        android:padding="3dp"/>
 
     <EditText
         android:layout_width="match_parent"
@@ -74,6 +64,24 @@
             android:maxLength="3"
             android:layout_marginBottom="1dp"
             android:padding="3dp"/>
+
     </LinearLayout>
 
+    <CheckBox
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/storeCardCheckBox"
+        android:text="@string/store_card_check"
+        android:visibility="gone"/>
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/cardNameEditText"
+        android:hint="@string/card_name"
+        android:background="@drawable/box"
+        android:digits="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890 "
+        android:visibility="gone"
+        android:layout_marginBottom="1dp"
+        android:padding="3dp"/>
 </LinearLayout>

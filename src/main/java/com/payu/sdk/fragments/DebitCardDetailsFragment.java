@@ -16,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -58,6 +59,7 @@ public class DebitCardDetailsFragment extends Fragment implements PaymentListene
     private String cardNumber = "";
     private String cvv = "";
     private String nameOnCard = "";
+    private String cardName = "";
 
     DatePickerDialog.OnDateSetListener mDateSetListener;
     int mYear;
@@ -73,6 +75,7 @@ public class DebitCardDetailsFragment extends Fragment implements PaymentListene
     Drawable cardNumberDrawable;
     Drawable calenderDrawable;
     Drawable cvvDrawable;
+    Drawable cardNameDrawable;
 
     public DebitCardDetailsFragment() {
         // Required empty public constructor
@@ -119,6 +122,31 @@ public class DebitCardDetailsFragment extends Fragment implements PaymentListene
             }
         });
 
+        /* store card */
+        if(getActivity().getIntent().getExtras().getString(PayU.USER_CREDENTIALS) != null){
+            debitCardDetails.findViewById(R.id.storeCardCheckBox).setVisibility(View.VISIBLE);
+        }
+        // this comes form stored card fragment
+        if(getArguments().getString(PayU.STORE_CARD) != null){
+            debitCardDetails.findViewById(R.id.storeCardCheckBox).setVisibility(View.VISIBLE);
+            ((CheckBox)debitCardDetails.findViewById(R.id.storeCardCheckBox)).setChecked(true);
+            debitCardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.VISIBLE);
+        }
+
+        debitCardDetails.findViewById(R.id.storeCardCheckBox).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(((CheckBox) view).isChecked()){
+                    getArguments().putString(PayU.STORE_CARD, PayU.STORE_CARD);
+                    debitCardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.VISIBLE);
+                }else{
+                    getArguments().remove(PayU.STORE_CARD);
+                    debitCardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.GONE);
+                }
+
+            }
+        });
+
         debitCardDetails.findViewById(R.id.makePayment).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -146,7 +174,7 @@ public class DebitCardDetailsFragment extends Fragment implements PaymentListene
                     requiredParams.put(PayU.SURL, payment.getSurl());
 
                     if (getArguments().getString(PayU.STORE_CARD) != null) {
-                        requiredParams.put("card_name", nameOnCard);
+                        requiredParams.put("card_name", cardName);
                         requiredParams.put(PayU.STORE_CARD, "1");
                         requiredParams.put("user_credentials", getActivity().getIntent().getExtras().getString(PayU.USER_CREDENTIALS));
                     }
@@ -205,6 +233,7 @@ public class DebitCardDetailsFragment extends Fragment implements PaymentListene
         cardNumberDrawable = getResources().getDrawable(R.drawable.card);
         calenderDrawable = getResources().getDrawable(R.drawable.calendar);
         cvvDrawable = getResources().getDrawable(R.drawable.lock);
+        cardNameDrawable = getResources().getDrawable(R.drawable.user);
 
         nameOnCardDrawable.setAlpha(100);
         cardNumberDrawable.setAlpha(100);
@@ -217,6 +246,25 @@ public class DebitCardDetailsFragment extends Fragment implements PaymentListene
         ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNumberDrawable, null);
         ((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, calenderDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cvvEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cvvDrawable, null);
+        ((EditText) getActivity().findViewById(R.id.cardNameEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNameDrawable, null);
+
+        ((EditText)getActivity().findViewById(R.id.cardNameEditText)).addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
+                cardName = ((EditText) getActivity().findViewById(R.id.cardNameEditText)).getText().toString();
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+
 
         ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).addTextChangedListener(new TextWatcher() {
             @Override
