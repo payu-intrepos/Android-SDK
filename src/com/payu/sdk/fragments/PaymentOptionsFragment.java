@@ -14,8 +14,8 @@ import com.payu.sdk.Constants;
 import com.payu.sdk.GetResponseTask;
 import com.payu.sdk.PayU;
 import com.payu.sdk.PaymentListener;
-import com.payu.sdk.adapters.PaymentModeAdapter;
 import com.payu.sdk.R;
+import com.payu.sdk.adapters.PaymentModeAdapter;
 
 import org.apache.http.NameValuePair;
 import org.json.JSONArray;
@@ -28,13 +28,10 @@ import java.util.List;
 
 
 public class PaymentOptionsFragment extends Fragment implements PaymentListener {
-    private PayU.PaymentMode[] mAvailableOptions;
-
     PaymentListener mPaymentListener;
-
     ProgressDialog mProgressDialog;
-
     PayU.PaymentMode[] paymentOptions;
+    private PayU.PaymentMode[] mAvailableOptions;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {

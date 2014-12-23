@@ -54,7 +54,7 @@ public class PayU {
     public static final String EXPIRY_YEAR = "ccexpyr";
     public static final String CARDHOLDER_NAME = "ccname";
     public static final String CVV = "ccvv";
-    public static final String USER_CREDENTIALS = "usercredentials";
+    public static final String USER_CREDENTIALS = "user_credentials";
     public static final String OFFER_KEY = "offer_key";
     public static final String DROP_CATEGORY = "drop_category";
     public static final String ENFORCE_PAYMETHOD = "enforce_paymethod";
@@ -62,7 +62,8 @@ public class PayU {
     public static final String STORE_CARD = "store_card";
     public static final String UDF = "device_type";
     public static final String SDK = "1";
-    public static final String DISABLE_PAYMENT_PROCESS_BACK_BUTTON = "disable_web_view_back";
+//    public static final String DISABLE_PAYMENT_PROCESS_BACK_BUTTON = "disable_web_view_back";
+    public static final String DISABLE_CUSTOM_BROWSER = "showCustom";
 
     public static final String VAR1 = "var1";
     public static final String VAR2 = "var2";
@@ -141,28 +142,16 @@ public class PayU {
     public void startPaymentProcess(double amount, HashMap<String, String> userParams, PaymentMode[] modes) {
         Intent intent = new Intent(mActivity, PaymentOptionsActivity.class);
         intent.putExtra(AMOUNT, amount);
-        intent.putExtra(TXNID, userParams.get(TXNID));
-        intent.putExtra(PRODUCT_INFO, userParams.get(PRODUCT_INFO));
-        intent.putExtra(SURL, userParams.get(SURL));
+        for(String key : userParams.keySet()) {
+            intent.putExtra(key, userParams.get(key));
+        }
         intent.putExtra(MERCHANT_KEY, mMerchantKey);
-        if (userParams.get(OFFER_KEY) != null)
-            intent.putExtra(OFFER_KEY, userParams.get(OFFER_KEY));
-        intent.putExtra(USER_CREDENTIALS, userParams.get(USER_CREDENTIALS));
-        if (userParams.get(FIRSTNAME) != null)
-            intent.putExtra(FIRSTNAME, userParams.get(FIRSTNAME));
-        if (userParams.get(EMAIL) != null)
-            intent.putExtra(EMAIL, userParams.get(EMAIL));
 
         if (userParams.containsKey(DROP_CATEGORY)) {
-            intent.putExtra(DROP_CATEGORY, userParams.get(DROP_CATEGORY).replaceAll("\\s+", ""));
             dropCategory = userParams.get(DROP_CATEGORY).replaceAll("\\s+", "");
         }
         if (userParams.containsKey(ENFORCE_PAYMETHOD)) {
-            intent.putExtra(ENFORCE_PAYMETHOD, userParams.get(ENFORCE_PAYMETHOD));
             enforcePayMethod = userParams.get(ENFORCE_PAYMETHOD);
-        }
-        if (userParams.containsKey(DISABLE_PAYMENT_PROCESS_BACK_BUTTON)){
-            intent.putExtra(DISABLE_PAYMENT_PROCESS_BACK_BUTTON, userParams.get(DISABLE_PAYMENT_PROCESS_BACK_BUTTON));
         }
         if (modes != null) {
             int[] m = new int[modes.length];
@@ -235,7 +224,8 @@ public class PayU {
 //                hexString.append(Integer.toHexString(0xFF & hashByte));
                 hexString.append(Integer.toString((hashByte & 0xff) + 0x100, 16).substring(1));
             }
-            postData = MERCHANT_KEY + "=" + mMerchantKey + "&";
+//            postData = MERCHANT_KEY + "=" + mMerchantKey + "&";
+            postData = "";
             for (String key : params.keySet()) {
                 postData += key + "=" + URLEncoder.encode(params.get(key), "UTF-8") + "&";
             }

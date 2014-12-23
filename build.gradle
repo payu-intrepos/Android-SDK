@@ -1,29 +1,35 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 20
-    buildToolsVersion '20'
+    compileSdkVersion 21
+    buildToolsVersion '21.1.2'
     defaultConfig {
-        applicationId 'com.payu.sdk'
         minSdkVersion 9
-        targetSdkVersion 20
+        targetSdkVersion 21
         versionCode 1
         versionName '1.0'
     }
+
     buildTypes {
         release {
-            runProguard false
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-    productFlavors {
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            res.srcDirs = ['res']
+        }
     }
 }
 
 dependencies {
-    compile fileTree(include: '*.jar', dir: 'libs')
-    compile 'com.android.support:support-v4:20.0.0'
+    compile 'com.android.support:support-v4:21.0.3'
     //    compile files('libs/CustomBrowser.aar')
     //    compile(name:'CustomBrowser', ext:'aar')
+    //    compile project(':CustomBrowser')
     compile project(':CustomBrowser')
 }

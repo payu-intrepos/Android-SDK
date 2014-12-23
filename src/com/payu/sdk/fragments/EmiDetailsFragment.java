@@ -2,7 +2,6 @@ package com.payu.sdk.fragments;
 
 
 import android.app.DatePickerDialog;
-import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -19,18 +18,14 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.payu.sdk.Constants;
-import com.payu.sdk.adapters.EmiBankListAdapter;
-import com.payu.sdk.adapters.EmiTimeIntervalAdapter;
 import com.payu.sdk.Luhn;
 import com.payu.sdk.Params;
 import com.payu.sdk.PayU;
 import com.payu.sdk.Payment;
-import com.payu.sdk.ProcessPaymentActivity;
 import com.payu.sdk.R;
 import com.payu.sdk.SetupCardDetails;
-import com.payu.sdk.exceptions.HashException;
-import com.payu.sdk.exceptions.MissingParameterException;
+import com.payu.sdk.adapters.EmiBankListAdapter;
+import com.payu.sdk.adapters.EmiTimeIntervalAdapter;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -48,38 +43,29 @@ import java.util.Set;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class EmiDetailsFragment extends Fragment {
+public class EmiDetailsFragment extends ProcessPaymentFragment {
 
     Spinner bankListSpinner;
 
     Spinner emiTimeIntervalSpinner;
-
-    Payment payment;
-    Params requiredParams = new Params();
-
-    Payment.Builder builder = new Payment().new Builder();
     String bankCode;
-
+    DatePickerDialog.OnDateSetListener mDateSetListener;
+    int mYear;
+    int mMonth;
+    int mDay;
+    Boolean isNameOnCardValid = false;
+    Boolean isCardNumberValid = false;
+    Boolean isExpired = true;
+    Boolean isCvvValid = false;
+    Drawable nameOnCardDrawable;
+    Drawable cardNumberDrawable;
+    Drawable calenderDrawable;
+    Drawable cvvDrawable;
     private int expiryMonth;
     private int expiryYear;
     private String cardNumber = "";
     private String cvv = "";
     private String nameOnCard = "";
-
-    DatePickerDialog.OnDateSetListener mDateSetListener;
-    int mYear;
-    int mMonth;
-    int mDay;
-
-    Boolean isNameOnCardValid = false;
-    Boolean isCardNumberValid = false;
-    Boolean isExpired = true;
-    Boolean isCvvValid = false;
-
-    Drawable nameOnCardDrawable;
-    Drawable cardNumberDrawable;
-    Drawable calenderDrawable;
-    Drawable cvvDrawable;
 
 
     public EmiDetailsFragment() {
@@ -131,56 +117,21 @@ public class EmiDetailsFragment extends Fragment {
             @Override
             public void onClick(View view) {
 
+                Params requiredParams = new Params();
+
                 String cardNumber = ((TextView) emi_fragment.findViewById(R.id.cardNumberEditText)).getText().toString();
 
-                try {
 
-                    builder.setMode(PayU.PaymentMode.EMI);
-                    builder.setAmount(getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT));
-                    builder.setProductInfo(getActivity().getIntent().getExtras().getString(PayU.PRODUCT_INFO));
-                    builder.setTxnId(getActivity().getIntent().getExtras().getString(PayU.TXNID));
-                    builder.setSurl(getActivity().getIntent().getExtras().getString(PayU.SURL));
-                    payment = builder.create();
+                requiredParams.put(PayU.CARD_NUMBER, cardNumber);
+                requiredParams.put(PayU.EXPIRY_MONTH, String.valueOf(expiryMonth));
+                requiredParams.put(PayU.EXPIRY_YEAR, String.valueOf(expiryYear));
+                requiredParams.put(PayU.CARDHOLDER_NAME, nameOnCard);
+                requiredParams.put(PayU.CVV, cvv);
 
-                    requiredParams.put(PayU.CARD_NUMBER, cardNumber);
-                    requiredParams.put(PayU.EXPIRY_MONTH, String.valueOf(expiryMonth));
-                    requiredParams.put(PayU.EXPIRY_YEAR, String.valueOf(expiryYear));
-                    requiredParams.put(PayU.CARDHOLDER_NAME, nameOnCard);
-                    requiredParams.put(PayU.CVV, cvv);
 
-                    /*payment params*/
-                    requiredParams.put(PayU.TXNID, payment.getTxnId());
-                    requiredParams.put(PayU.AMOUNT, String.valueOf(payment.getAmount()));
-                    requiredParams.put(PayU.PRODUCT_INFO, payment.getProductInfo());
-                    requiredParams.put(PayU.SURL, payment.getSurl());
+                requiredParams.put(PayU.BANKCODE, bankCode);
+                startPaymentProcessActivity(PayU.PaymentMode.EMI, requiredParams);
 
-                    /*additional data*/
-                    if (getActivity().getIntent().getExtras().getString(PayU.FIRSTNAME) != null)
-                        requiredParams.put(PayU.FIRSTNAME, getActivity().getIntent().getExtras().getString(PayU.FIRSTNAME));
-                    if (getActivity().getIntent().getExtras().getString(PayU.EMAIL) != null)
-                        requiredParams.put(PayU.EMAIL, getActivity().getIntent().getExtras().getString(PayU.EMAIL));
-
-                    requiredParams.put(PayU.BANKCODE, bankCode);
-
-                    // get the parameters required
-                    String postData = PayU.getInstance(getActivity()).createPayment(payment, requiredParams);
-                    // we get post data and url here,,,we launch ProcessPaymentActivity from here..
-//
-                    Intent intent = new Intent(getActivity(), ProcessPaymentActivity.class);
-                    intent.putExtra(Constants.POST_DATA, postData);
-
-                    //disable back button
-                    if(getActivity().getIntent().getExtras().getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON) != null)
-                        intent.putExtra(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON, getActivity().getIntent().getExtras().getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON));
-
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    getActivity().startActivity(intent);
-
-                } catch (MissingParameterException e) {
-                    e.printStackTrace();
-                } catch (HashException e) {
-                    e.printStackTrace();
-                }
 
             }
         });

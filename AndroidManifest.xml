@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.payu.sdk" >
+    
+    <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="21"/>
 
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application android:allowBackup="true">
+        <activity
+            android:name=".PaymentOptionsActivity"
+            android:configChanges="orientation|keyboard|screenSize">
+        </activity>
         <activity
             android:name=".ProcessPaymentActivity"
             android:configChanges="orientation|keyboard|screenSize">

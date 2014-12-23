@@ -1,12 +1,9 @@
 package com.payu.sdk.fragments;
 
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
@@ -27,12 +24,9 @@ import com.payu.sdk.Params;
 import com.payu.sdk.PayU;
 import com.payu.sdk.Payment;
 import com.payu.sdk.PaymentListener;
-import com.payu.sdk.ProcessPaymentActivity;
 import com.payu.sdk.R;
 import com.payu.sdk.StoreCardTask;
 import com.payu.sdk.adapters.StoredCardAdapter;
-import com.payu.sdk.exceptions.HashException;
-import com.payu.sdk.exceptions.MissingParameterException;
 
 import org.apache.http.NameValuePair;
 import org.json.JSONArray;
@@ -48,12 +42,8 @@ import java.util.List;
  * A simple {@link Fragment} subclass.
  */
 
-public class StoredCardFragment extends Fragment implements PaymentListener {
+public class StoredCardFragment extends ProcessPaymentFragment implements PaymentListener {
 
-    Payment payment;
-    Params requiredParams = new Params();
-
-    Payment.Builder builder = new Payment().new Builder();
 
     ProgressDialog mProgressDialog;
 
@@ -213,67 +203,19 @@ public class StoredCardFragment extends Fragment implements PaymentListener {
     }
 
     private void makePayment(JSONObject selectedCard, String cvv) {
+        Params requiredParams = new Params();
         try {
-
-            Bundle bundle = getActivity().getPackageManager().getApplicationInfo(getActivity().getPackageName(), PackageManager.GET_META_DATA).metaData;
-
-            builder.setMode(PayU.PaymentMode.valueOf(selectedCard.getString("card_mode")));
-            builder.setAmount(getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT));
-            builder.setProductInfo(getActivity().getIntent().getExtras().getString(PayU.PRODUCT_INFO));
-            builder.setTxnId(getActivity().getIntent().getExtras().getString(PayU.TXNID));
-            builder.setSurl(getActivity().getIntent().getExtras().getString(PayU.SURL));
-            payment = builder.create();
-
 
             requiredParams.put(PayU.CVV, cvv);
 
-            requiredParams.put("user_credentials", getActivity().getIntent().getExtras().getString(PayU.USER_CREDENTIALS));
-
             requiredParams.put("store_card_token", selectedCard.getString("card_token"));
 
-                    /*payment params*/
-            requiredParams.put(PayU.TXNID, payment.getTxnId());
-            requiredParams.put(PayU.AMOUNT, String.valueOf(payment.getAmount()));
-            requiredParams.put(PayU.PRODUCT_INFO, payment.getProductInfo());
-            requiredParams.put(PayU.SURL, payment.getSurl());
-
-                    /*additional data*/
             requiredParams.put(PayU.FIRSTNAME, selectedCard.getString("name_on_card"));
 
-            if (getActivity().getIntent().getExtras().getString(PayU.EMAIL) != null)
-                requiredParams.put(PayU.EMAIL, getActivity().getIntent().getExtras().getString(PayU.EMAIL));
+            startPaymentProcessActivity(PayU.PaymentMode.valueOf(selectedCard.getString("card_mode")), requiredParams);
 
-            /* offers */
-            if (getArguments().getString(PayU.OFFER_KEY) != null) {
-                requiredParams.put(PayU.OFFER_KEY, getArguments().getString(PayU.OFFER_KEY));
-            }
 
-            /* Drop category*/
-
-            if (getActivity().getIntent().getExtras().getString(PayU.DROP_CATEGORY) != null) {
-                requiredParams.put(PayU.DROP_CATEGORY, getActivity().getIntent().getExtras().getString(PayU.DROP_CATEGORY));
-            }
-
-            // get the parameters required
-            String postData = PayU.getInstance(getActivity()).createPayment(payment, requiredParams);
-            // we get post data and url here,,,we launch ProcessPaymentActivity from here..
-            Intent intent = new Intent(getActivity(), ProcessPaymentActivity.class);
-            intent.putExtra(Constants.POST_DATA, postData);
-
-            //disable back button
-            if(getActivity().getIntent().getExtras().getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON) != null)
-                intent.putExtra(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON, getActivity().getIntent().getExtras().getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON));
-
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            getActivity().startActivity(intent);
-
-        } catch (MissingParameterException e) {
-            e.printStackTrace();
-        } catch (HashException e) {
-            e.printStackTrace();
         } catch (JSONException e) {
-            e.printStackTrace();
-        } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
     }

@@ -14,25 +14,24 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.DatePicker;
 import android.widget.EditText;
-import android.widget.Spinner;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.payu.sdk.Constants;
 import com.payu.sdk.Luhn;
 import com.payu.sdk.PayU;
 import com.payu.sdk.PaymentListener;
 import com.payu.sdk.R;
-import com.payu.sdk.adapters.SelectCardAdapter;
 import com.payu.sdk.SetupCardDetails;
 import com.payu.sdk.StoreCardTask;
 
 import org.apache.http.NameValuePair;
 import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
@@ -41,39 +40,30 @@ import java.util.List;
 
 
 /**
- * A simple {@link android.support.v4.app.Fragment} subclass.
+ * A simple {@link Fragment} subclass.
  */
-public class EditCardFragment extends Fragment implements PaymentListener {
+public class StoreCardFragment extends Fragment implements PaymentListener {
 
-
-    ProgressDialog mProgressDialog;
-
-    String storedCardToken;
-
-    private int expiryMonth;
-    private int expiryYear;
-    private String cardNumber = "";
-    private String nameOnCard = "";
-    private String cardType;
-    private String cardMode;
 
     DatePickerDialog.OnDateSetListener mDateSetListener;
     int mYear;
     int mMonth;
     int mDay;
-
-
     Boolean isNameOnCardValid = false;
     Boolean isCardNumberValid = false;
     Boolean isExpired = true;
-
     Drawable nameOnCardDrawable;
     Drawable cardNumberDrawable;
     Drawable calenderDrawable;
     Drawable cvvDrawable;
+    Drawable cardNameDrawable;
+    ProgressDialog mProgressDialog;
+    private int expiryMonth;
+    private int expiryYear;
+    private String cardNumber = "";
+    private String nameOnCard = "";
 
-
-    public EditCardFragment() {
+    public StoreCardFragment() {
         // Required empty public constructor
     }
 
@@ -81,26 +71,23 @@ public class EditCardFragment extends Fragment implements PaymentListener {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
         // Inflate the layout for this fragment
-        final View editCardFragment = inflater.inflate(R.layout.fragment_edit_card, container, false);
-
-
-        mProgressDialog = new ProgressDialog(getActivity());
-
-        editCardFragment.findViewById(R.id.cvvEditText).setVisibility(View.INVISIBLE);
+        final View storeCardFragment = inflater.inflate(R.layout.fragment_store_card, container, false);
 
         mYear = Calendar.getInstance().get(Calendar.YEAR);
         mMonth = Calendar.getInstance().get(Calendar.MONTH);
         mDay = Calendar.getInstance().get(Calendar.DATE);
 
+        mProgressDialog = new ProgressDialog(getActivity());
+
+        storeCardFragment.findViewById(R.id.cvvEditText).setVisibility(View.INVISIBLE);
+
         mDateSetListener = new DatePickerDialog.OnDateSetListener() {
             @Override
             public void onDateSet(DatePicker datePicker, int i, int i2, int i3) {
-                ((TextView) editCardFragment.findViewById(R.id.expiryDatePickerEditText)).setText("" + (i2 + 1) + " / " + i);
+                ((TextView) storeCardFragment.findViewById(R.id.expiryDatePickerEditText)).setText("" + (i2 + 1) + " / " + i);
                 expiryMonth = i2 + 1;
                 expiryYear = i;
-
                 if (expiryYear > Calendar.getInstance().get(Calendar.YEAR)) {
                     isExpired = false;
                     valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
@@ -111,11 +98,10 @@ public class EditCardFragment extends Fragment implements PaymentListener {
                     isExpired = true;
                     invalid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
                 }
-
             }
         };
 
-        editCardFragment.findViewById(R.id.expiryDatePickerEditText).setOnTouchListener(new View.OnTouchListener() {
+        storeCardFragment.findViewById(R.id.expiryDatePickerEditText).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if (motionEvent.getAction() == MotionEvent.ACTION_UP)
@@ -124,21 +110,29 @@ public class EditCardFragment extends Fragment implements PaymentListener {
             }
         });
 
-        editCardFragment.findViewById(R.id.editCard).setOnClickListener(new View.OnClickListener() {
+
+        storeCardFragment.findViewById(R.id.cardNameEditText).setVisibility(View.VISIBLE);
+
+
+        storeCardFragment.findViewById(R.id.saveCard).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-                mProgressDialog = new ProgressDialog(getActivity());
                 mProgressDialog.setMessage(getString(R.string.please_wait));
                 mProgressDialog.setIndeterminate(true);
                 mProgressDialog.setCancelable(false);
                 mProgressDialog.show();
 
-                String cardNumber = ((TextView) editCardFragment.findViewById(R.id.cardNumberEditText)).getText().toString();
-//                cardBrand = SetupCardDetails.findIssuer(cardNumber, cardType);
+                if (getArguments().getString(PayU.USER_CREDENTIALS).length() < 1) {
+                    Toast.makeText(getActivity(), "User credentials not found.", Toast.LENGTH_LONG).show();
+                    return;
+                }
 
-                // in response cardmode: cc, card_type:visa, card_brand: master
+                RadioGroup radioGroup = (RadioGroup) storeCardFragment.findViewById(R.id.cardRadioGroup);
+                String cardMode = ((RadioButton) getActivity().findViewById(radioGroup.getCheckedRadioButtonId())).getText().toString().contentEquals("Credit card") ? "CC" : "DC";
 
+                String cardNumber = ((TextView) storeCardFragment.findViewById(R.id.cardNumberEditText)).getText().toString();
+                String cardType;
                 if (cardMode.contentEquals("CC")) {
                     cardType = "CC";
                 } else {
@@ -153,34 +147,33 @@ public class EditCardFragment extends Fragment implements PaymentListener {
                 HashMap<String, String> varList = new HashMap<String, String>();
                 // user credentials
                 varList.put(Constants.VAR1, getArguments().getString(PayU.USER_CREDENTIALS));
-                //card token
-                varList.put(Constants.VAR2, storedCardToken);
-                // card name
-                varList.put(Constants.VAR3, ((EditText) editCardFragment.findViewById(R.id.cardNameEditText)).getText().toString());
+                //card name xyz
+                varList.put(Constants.VAR2, ((EditText) storeCardFragment.findViewById(R.id.cardNameEditText)).getText().toString());
                 //card mode cc
-                varList.put(Constants.VAR4, cardMode);
+                varList.put(Constants.VAR3, cardMode);
                 //card type
-                varList.put(Constants.VAR5, cardType);
+                varList.put(Constants.VAR4, cardType);
                 // name on card
-                varList.put(Constants.VAR6, ((EditText) editCardFragment.findViewById(R.id.nameOnCardEditText)).getText().toString());
+                varList.put(Constants.VAR5, ((EditText) storeCardFragment.findViewById(R.id.nameOnCardEditText)).getText().toString());
                 // card number
-                varList.put(Constants.VAR7, cardNumber);
+                varList.put(Constants.VAR6, cardNumber);
                 // card exp month
-                varList.put(Constants.VAR8, "" + expiryMonth);
+                varList.put(Constants.VAR7, "" + expiryMonth);
                 // card exp year
-                varList.put(Constants.VAR9, "" + expiryYear);
+                varList.put(Constants.VAR8, "" + expiryYear);
+
                 try {
-                    postParams = PayU.getInstance(getActivity()).getParams(Constants.EDIT_USER_CARD, varList);
-                    StoreCardTask getStoredCards = new StoreCardTask(EditCardFragment.this);
+                    postParams = PayU.getInstance(getActivity()).getParams(Constants.SAVE_USER_CARD, varList);
+                    StoreCardTask getStoredCards = new StoreCardTask(StoreCardFragment.this);
                     getStoredCards.execute(postParams);
                 } catch (NoSuchAlgorithmException e) {
                     e.printStackTrace();
                 }
-            }
 
+            }
         });
 
-        return editCardFragment;
+        return storeCardFragment;
 
     }
 
@@ -192,7 +185,9 @@ public class EditCardFragment extends Fragment implements PaymentListener {
         cardNumberDrawable = getResources().getDrawable(R.drawable.card);
         calenderDrawable = getResources().getDrawable(R.drawable.calendar);
         cvvDrawable = getResources().getDrawable(R.drawable.lock);
+        cardNameDrawable = getResources().getDrawable(R.drawable.user);
 
+//        cardNameDrawable.setAlpha(100);
         nameOnCardDrawable.setAlpha(100);
         cardNumberDrawable.setAlpha(100);
         calenderDrawable.setAlpha(100);
@@ -200,6 +195,7 @@ public class EditCardFragment extends Fragment implements PaymentListener {
 
 
         ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, nameOnCardDrawable, null);
+        ((EditText) getActivity().findViewById(R.id.cardNameEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNameDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNumberDrawable, null);
         ((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, calenderDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cvvEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cvvDrawable, null);
@@ -255,10 +251,33 @@ public class EditCardFragment extends Fragment implements PaymentListener {
             }
         });
 
-        getUserCards();
+        getActivity().findViewById(R.id.cardNumberEditText).setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean b) {
+                if (b) {
+                    makeInvalid();
+                }
+            }
+        });
+        getActivity().findViewById(R.id.nameOnCardEditText).setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean b) {
+                if (b) {
+                    makeInvalid();
+                }
+            }
+        });
+
+        getActivity().findViewById(R.id.expiryDatePickerEditText).setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean b) {
+                if (b) {
+                    makeInvalid();
+                }
+            }
+        });
 
     }
-
 
     @Override
     public void onPaymentOptionSelected(PayU.PaymentMode paymentMode) {
@@ -274,21 +293,16 @@ public class EditCardFragment extends Fragment implements PaymentListener {
     public void onGetStoreCardDetails(JSONArray response) {
         mProgressDialog.dismiss();
         try {
-            if (response.length() < 1) {
-                getActivity().findViewById(R.id.editCard).setEnabled(false);
-                getActivity().findViewById(R.id.editCard).setBackgroundResource(R.drawable.button);
+            if (response.length() == 0) {
                 new AlertDialog.Builder(getActivity())
                         .setTitle(R.string.status)
-                        .setMessage(R.string.no_card_found)
+                        .setMessage(getString(R.string.something_went_wrong))
                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int whichButton) {
 
                             }
                         }).show();
-            } else if (response.get(0).toString().contains("edited Successfully")) {
-
-                getUserCards();
-
+            } else {
                 new AlertDialog.Builder(getActivity())
                         .setTitle(R.string.status)
                         .setMessage(response.get(0).toString())
@@ -297,84 +311,36 @@ public class EditCardFragment extends Fragment implements PaymentListener {
 
                             }
                         }).show();
-            } else {
-                SelectCardAdapter adapter = new SelectCardAdapter(getActivity(), response);
-                final Spinner selectCardSpinner = (Spinner) getActivity().findViewById(R.id.selectCardSpinner);
-                selectCardSpinner.setAdapter(adapter);
-                selectCardSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                        final JSONObject selectedCard = (JSONObject) adapterView.getAdapter().getItem(i);
-                        try {
-//                            clearData();
-                            storedCardToken = selectedCard.getString("card_token");
-                            ((EditText) getActivity().findViewById(R.id.cardNameEditText)).setText(selectedCard.getString("card_name"));
-                            ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setText(selectedCard.getString("name_on_card"));
-                            ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).getText().clear();
-                            ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setHint(selectedCard.getString("card_no"));
-                            ((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)).setText(selectedCard.getString("expiry_year") + "/" + selectedCard.getString("expiry_month"));
-                            expiryMonth = selectedCard.getInt("expiry_month");
-                            expiryYear = selectedCard.getInt("expiry_year");
-                            isExpired = false;
-                            cardMode = selectedCard.getString("card_mode");
-//                            cardType = selectedCard.getString("card_type");
-                            valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-
-                    @Override
-                    public void onNothingSelected(AdapterView<?> adapterView) {
-
-                    }
-                });
             }
+//            Toast.makeText(getActivity(), response.get(0).toString(), Toast.LENGTH_LONG).show();
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
 
-
     private void valid(EditText editText, Drawable drawable) {
         drawable.setAlpha(255);
         editText.setCompoundDrawablesWithIntrinsicBounds(null, null, drawable, null);
-        if (isCardNumberValid && !isExpired && isNameOnCardValid && storedCardToken != null) {
-            getActivity().findViewById(R.id.editCard).setEnabled(true);
-//            getActivity().findViewById(R.id.editCard).setBackgroundResource(R.drawable.button);
+        if (isCardNumberValid && !isExpired && isNameOnCardValid) {
+            getActivity().findViewById(R.id.saveCard).setEnabled(true);
+//            getActivity().findViewById(R.id.saveCard).setBackgroundResource(R.drawable.button_enabled);
         } else {
-            getActivity().findViewById(R.id.editCard).setEnabled(false);
-//            getActivity().findViewById(R.id.editCard).setBackgroundResource(R.drawable.button);
+            getActivity().findViewById(R.id.saveCard).setEnabled(false);
+//            getActivity().findViewById(R.id.saveCard).setBackgroundResource(R.drawable.button);
         }
     }
 
     private void invalid(EditText editText, Drawable drawable) {
         drawable.setAlpha(100);
         editText.setCompoundDrawablesWithIntrinsicBounds(null, null, drawable, null);
-        getActivity().findViewById(R.id.editCard).setEnabled(false);
-        getActivity().findViewById(R.id.editCard).setBackgroundResource(R.drawable.button);
+        getActivity().findViewById(R.id.saveCard).setEnabled(false);
+        getActivity().findViewById(R.id.saveCard).setBackgroundResource(R.drawable.button);
     }
 
-    private void getUserCards() {
-
-        mProgressDialog = new ProgressDialog(getActivity());
-        mProgressDialog.setMessage(getString(R.string.please_wait));
-        mProgressDialog.setIndeterminate(true);
-        mProgressDialog.setCancelable(false);
-        mProgressDialog.show();
-
-        List<NameValuePair> postParams = null;
-
-        HashMap varList = new HashMap();
-        varList.put(Constants.VAR1, getArguments().getString(PayU.USER_CREDENTIALS));
-
-        try {
-            postParams = PayU.getInstance(getActivity()).getParams(Constants.GET_USER_CARDS, varList);
-            StoreCardTask getStoredCards = new StoreCardTask(EditCardFragment.this);
-            getStoredCards.execute(postParams);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
+    private void makeInvalid() {
+        if (!isCardNumberValid && cardNumber.length() > 0 && !getActivity().findViewById(R.id.cardNumberEditText).isFocused())
+            ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);
+        if (!isNameOnCardValid && nameOnCard.length() > 0 && !getActivity().findViewById(R.id.nameOnCardEditText).isFocused())
+            ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);
     }
 }

@@ -56,6 +56,10 @@ public class Payment extends HashMap<String, String> {
         return get(PayU.SURL);
     }
 
+    public String getFurl() {
+        return get(PayU.FURL);
+    }
+
     public class Builder {
         private Payment payment;
 
@@ -63,29 +67,13 @@ public class Payment extends HashMap<String, String> {
             payment = new Payment();
         }
 
-        public Builder setMode(PayU.PaymentMode mode) {
-            payment.put(PayU.MODE, String.valueOf(mode));
+        public Builder set(String key, String value){
+            payment.put(key,value);
             return this;
         }
 
-        public Builder setAmount(double amount) {
-            payment.put(PayU.AMOUNT, amount);
-            return this;
-        }
-
-        public Builder setTxnId(String txnId) {
-            payment.put(PayU.TXNID, txnId);
-            return this;
-        }
-
-        public Builder setProductInfo(String productInfo) {
-            payment.put(PayU.PRODUCT_INFO, productInfo);
-            return this;
-        }
-
-        public Builder setSurl(String surl) {
-            payment.put(PayU.SURL, surl);
-            return this;
+        public String get(String key){
+            return payment.get(key);
         }
 
         public Payment create() throws MissingParameterException {

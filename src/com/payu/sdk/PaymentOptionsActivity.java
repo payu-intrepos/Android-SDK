@@ -68,7 +68,8 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
         bundle.putString(PayU.OFFER_KEY, extras.getString(PayU.OFFER_KEY));
         bundle.putString(PayU.DROP_CATEGORY, extras.getString(PayU.DROP_CATEGORY));
         bundle.putString(PayU.ENFORCE_PAYMETHOD, extras.getString(PayU.ENFORCE_PAYMETHOD));
-        bundle.putString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON, extras.getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON));
+//        bundle.putString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON, extras.getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON));
+        bundle.putString(PayU.DISABLE_CUSTOM_BROWSER, extras.getString(PayU.DISABLE_CUSTOM_BROWSER));
 
         switch (paymentMode) {
             case EMI:
@@ -126,50 +127,26 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
 
     private void payuMoney() throws MissingParameterException, HashException {
         Payment payment;
-        Params requiredParams = new Params();
-
         Payment.Builder builder = new Payment().new Builder();
+        Params requiredParams = new Params();
+//        requiredParams.put("service_provider", "payu_paisa");
 
-        builder.setMode(PayU.PaymentMode.PAYU_MONEY);
-        builder.setAmount(getIntent().getExtras().getDouble(PayU.AMOUNT));
-        builder.setProductInfo(getIntent().getExtras().getString(PayU.PRODUCT_INFO));
-        builder.setTxnId(getIntent().getExtras().getString(PayU.TXNID));
-        builder.setSurl(getIntent().getExtras().getString(PayU.SURL));
+        builder.set(PayU.MODE, String.valueOf(PayU.PaymentMode.PAYU_MONEY));
+        for(String key : getIntent().getExtras().keySet()) {
+            builder.set(key, String.valueOf(getIntent().getExtras().get(key)));
+            requiredParams.put(key, builder.get(key));
+        }
 
         payment = builder.create();
 
-
-        /*payment params*/
-        requiredParams.put(PayU.TXNID, payment.getTxnId());
-        requiredParams.put(PayU.AMOUNT, String.valueOf(payment.getAmount()));
-        requiredParams.put(PayU.PRODUCT_INFO, payment.getProductInfo());
-        requiredParams.put(PayU.SURL, payment.getSurl());
-//        requiredParams.put("service_provider", "payu_paisa");
-
-        /*additional data*/
-        if (getIntent().getExtras().getString(PayU.FIRSTNAME) != null)
-            requiredParams.put(PayU.FIRSTNAME, getIntent().getExtras().getString(PayU.FIRSTNAME));
-        if (getIntent().getExtras().getString(PayU.EMAIL) != null)
-            requiredParams.put(PayU.EMAIL, getIntent().getExtras().getString(PayU.EMAIL));
-
-        /*
-        if (extras.getString(PayU.OFFER_KEY) != null)
-            requiredParams.put(PayU.OFFER_KEY, extras.getString(PayU.OFFER_KEY));*/
-
-        // get the parameters required
         String postData = PayU.getInstance(this).createPayment(payment, requiredParams);
-        // we get post data and url here,,,we launch ProcessPaymentActivity from here..
 
         Intent intent = new Intent(this, ProcessPaymentActivity.class);
         intent.putExtra(Constants.POST_DATA, postData);
 
-        //disable back button
-        if(getIntent().getExtras().getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON) != null)
-            intent.putExtra(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON, getIntent().getExtras().getString(PayU.DISABLE_PAYMENT_PROCESS_BACK_BUTTON));
-
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        startActivityForResult(intent, PayU.RESULT);
-    }
+
+        startActivityForResult(intent, PayU.RESULT);    }
 
     @Override
     public void onGetAvailableBanks(JSONArray response) {
