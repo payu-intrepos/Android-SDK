@@ -170,7 +170,7 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == PayU.RESULT) {
-            setResult(resultCode);
+            setResult(resultCode, data);
             finish();
         }
     }
