@@ -21,17 +21,14 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.payu.sdk.Cards;
 import com.payu.sdk.Constants;
-import com.payu.sdk.Luhn;
+import com.payu.sdk.GetResponseTask;
 import com.payu.sdk.PayU;
 import com.payu.sdk.PaymentListener;
 import com.payu.sdk.R;
-import com.payu.sdk.SetupCardDetails;
-import com.payu.sdk.StoreCardTask;
 
 import org.apache.http.NameValuePair;
-import org.json.JSONArray;
-import org.json.JSONException;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
@@ -105,7 +102,7 @@ public class StoreCardFragment extends Fragment implements PaymentListener {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if (motionEvent.getAction() == MotionEvent.ACTION_UP)
-                    SetupCardDetails.customDatePicker(getActivity(), mDateSetListener, mYear, mMonth, mDay).show();
+                    Cards.customDatePicker(getActivity(), mDateSetListener, mYear, mMonth, mDay).show();
                 return false;
             }
         });
@@ -164,7 +161,7 @@ public class StoreCardFragment extends Fragment implements PaymentListener {
 
                 try {
                     postParams = PayU.getInstance(getActivity()).getParams(Constants.SAVE_USER_CARD, varList);
-                    StoreCardTask getStoredCards = new StoreCardTask(StoreCardFragment.this);
+                    GetResponseTask getStoredCards = new GetResponseTask(StoreCardFragment.this);
                     getStoredCards.execute(postParams);
                 } catch (NoSuchAlgorithmException e) {
                     e.printStackTrace();
@@ -233,11 +230,11 @@ public class StoreCardFragment extends Fragment implements PaymentListener {
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-                cardNumber = ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).getText().toString();
-                if (cardNumber.length() > 0 && Luhn.validate(cardNumber)) {
+                cardNumber = charSequence.toString();
+                if (cardNumber.length() > 0 && Cards.validateCardNumber(cardNumber)) {
                     // valid name on card
                     isCardNumberValid = true;
-                    valid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), SetupCardDetails.getCardDrawable(getResources(), cardNumber));
+//                    valid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), Cards.getCardDrawable(getResources(), cardNumber));
                 } else {
                     isCardNumberValid = false;
                     invalid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), cardNumberDrawable);
@@ -285,38 +282,34 @@ public class StoreCardFragment extends Fragment implements PaymentListener {
     }
 
     @Override
-    public void onGetAvailableBanks(JSONArray response) {
-
-    }
-
-    @Override
-    public void onGetStoreCardDetails(JSONArray response) {
+    public void onGetResponse(String responseMessage) {
         mProgressDialog.dismiss();
-        try {
-            if (response.length() == 0) {
-                new AlertDialog.Builder(getActivity())
-                        .setTitle(R.string.status)
-                        .setMessage(getString(R.string.something_went_wrong))
-                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int whichButton) {
+        if (PayU.storedCards.length() == 0) {
+            new AlertDialog.Builder(getActivity())
+                    .setTitle(R.string.status)
+                    .setMessage(getString(R.string.something_went_wrong))
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton) {
 
-                            }
-                        }).show();
-            } else {
-                new AlertDialog.Builder(getActivity())
-                        .setTitle(R.string.status)
-                        .setMessage(response.get(0).toString())
-                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int whichButton) {
+                        }
+                    }).show();
+        } else {
+            new AlertDialog.Builder(getActivity())
+                    .setTitle(R.string.status)
+                    .setMessage(responseMessage)
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int whichButton) {
 
-                            }
-                        }).show();
-            }
-//            Toast.makeText(getActivity(), response.get(0).toString(), Toast.LENGTH_LONG).show();
-        } catch (JSONException e) {
-            e.printStackTrace();
+                        }
+                    }).show();
         }
+//            Toast.makeText(getActivity(), response.get(0).toString(), Toast.LENGTH_LONG).show();
     }
+
+    /*@Override
+    public void onGetStoreCardDetails(JSONArray response) {
+
+    }*/
 
     private void valid(EditText editText, Drawable drawable) {
         drawable.setAlpha(255);

@@ -6,15 +6,4 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <application android:allowBackup="true">
-        <activity
-            android:name=".PaymentOptionsActivity"
-            android:configChanges="orientation|keyboard|screenSize">
-        </activity>
-        <activity
-            android:name=".ProcessPaymentActivity"
-            android:configChanges="orientation|keyboard|screenSize">
-        </activity>
-    </application>
-
 </manifest>

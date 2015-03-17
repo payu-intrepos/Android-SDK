@@ -60,7 +60,6 @@ public class CashCardAdapter extends BaseAdapter {
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
         return view;
     }
 

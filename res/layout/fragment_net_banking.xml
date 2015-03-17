@@ -18,6 +18,18 @@
         android:id="@+id/netBankingSpinner"/>
 
     <TextView
+        android:id="@+id/netBankingErrorText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:textColor="#FF0000"
+        android:textSize="11dp"
+        android:gravity="center_horizontal"
+        android:textAlignment="gravity"
+        android:background="@drawable/error_box"
+        android:visibility="gone"/>
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"

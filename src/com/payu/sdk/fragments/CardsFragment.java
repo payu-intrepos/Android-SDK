@@ -1,7 +1,9 @@
 package com.payu.sdk.fragments;
 
 
+import android.app.Activity;
 import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
@@ -20,17 +22,15 @@ import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.payu.sdk.Luhn;
+import com.payu.sdk.Cards;
+import com.payu.sdk.Constants;
+import com.payu.sdk.GetResponseTask;
 import com.payu.sdk.Params;
 import com.payu.sdk.PayU;
-import com.payu.sdk.Payment;
 import com.payu.sdk.PaymentListener;
 import com.payu.sdk.R;
-import com.payu.sdk.SetupCardDetails;
-import com.payu.sdk.StoreCardTask;
 
 import org.apache.http.NameValuePair;
-import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.security.NoSuchAlgorithmException;
@@ -42,13 +42,13 @@ import java.util.List;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class DebitCardDetailsFragment extends ProcessPaymentFragment implements PaymentListener {
+public class CardsFragment extends ProcessPaymentFragment implements PaymentListener {
 
     DatePickerDialog.OnDateSetListener mDateSetListener;
     int mYear;
     int mMonth;
     int mDay;
-    Boolean isNameOnCardValid = false;
+//    Boolean isNameOnCardValid = false;
     Boolean isCardNumberValid = false;
     Boolean isExpired = true;
     Boolean isCvvValid = false;
@@ -57,6 +57,7 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
     Drawable calenderDrawable;
     Drawable cvvDrawable;
     Drawable cardNameDrawable;
+    Drawable issuerDrawable;
     private int expiryMonth;
     private int expiryYear;
     private String cardNumber = "";
@@ -64,7 +65,9 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
     private String nameOnCard = "";
     private String cardName = "";
 
-    public DebitCardDetailsFragment() {
+    private String issuer = "";
+
+    public CardsFragment() {
         // Required empty public constructor
     }
 
@@ -73,7 +76,30 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        final View debitCardDetails = inflater.inflate(R.layout.fragment_debit_card_details, container, false);
+        final View cardDetails = inflater.inflate(R.layout.fragment_cards, container, false);
+
+        // initialize issuer drawable
+        Cards.initializeIssuers(getResources());
+
+        if(Constants.ENABLE_VAS && PayU.issuingBankDownBin == null){ // vas has not been called, lets fetch bank down time.
+            HashMap<String, String> varList = new HashMap<String, String>();
+
+            varList.put("var1", "default");
+            varList.put("var2", "default");
+            varList.put("var3", "default");
+
+            List<NameValuePair> postParams = null;
+
+            try {
+                postParams = PayU.getInstance(getActivity()).getParams(Constants.GET_VAS, varList);
+                GetResponseTask getResponse = new GetResponseTask(CardsFragment.this);
+                getResponse.execute(postParams);
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
+
+        ((EditText)cardDetails.findViewById(R.id.expiryDatePickerEditText)).setFocusable(false);
 
         mYear = Calendar.getInstance().get(Calendar.YEAR);
         mMonth = Calendar.getInstance().get(Calendar.MONTH);
@@ -82,7 +108,7 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
         mDateSetListener = new DatePickerDialog.OnDateSetListener() {
             @Override
             public void onDateSet(DatePicker datePicker, int i, int i2, int i3) {
-                ((TextView) debitCardDetails.findViewById(R.id.expiryDatePickerEditText)).setText("" + (i2 + 1) + " / " + i);
+                ((TextView) cardDetails.findViewById(R.id.expiryDatePickerEditText)).setText("" + (i2 + 1) + " / " + i);
 
                 expiryMonth = i2 + 1;
                 expiryYear = i;
@@ -99,11 +125,11 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
             }
         };
 
-        debitCardDetails.findViewById(R.id.expiryDatePickerEditText).setOnTouchListener(new View.OnTouchListener() {
+        cardDetails.findViewById(R.id.expiryDatePickerEditText).setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                    SetupCardDetails.customDatePicker(getActivity(), mDateSetListener, mYear, mMonth, mDay).show();
+                    Cards.customDatePicker(getActivity(), mDateSetListener, mYear, mMonth, mDay).show();
                 }
                 return false;
             }
@@ -111,53 +137,55 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
 
         /* store card */
         if (getActivity().getIntent().getExtras().getString(PayU.USER_CREDENTIALS) != null) {
-            debitCardDetails.findViewById(R.id.storeCardCheckBox).setVisibility(View.VISIBLE);
+            cardDetails.findViewById(R.id.storeCardCheckBox).setVisibility(View.VISIBLE);
         }
         // this comes form stored card fragment
         if (getArguments().getString(PayU.STORE_CARD) != null) {
-            debitCardDetails.findViewById(R.id.storeCardCheckBox).setVisibility(View.VISIBLE);
-            ((CheckBox) debitCardDetails.findViewById(R.id.storeCardCheckBox)).setChecked(true);
-            debitCardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.VISIBLE);
+            cardDetails.findViewById(R.id.storeCardCheckBox).setVisibility(View.VISIBLE);
+            ((CheckBox) cardDetails.findViewById(R.id.storeCardCheckBox)).setChecked(true);
+            cardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.VISIBLE);
         }
 
-        debitCardDetails.findViewById(R.id.storeCardCheckBox).setOnClickListener(new View.OnClickListener() {
+        cardDetails.findViewById(R.id.storeCardCheckBox).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (((CheckBox) view).isChecked()) {
                     getArguments().putString(PayU.STORE_CARD, PayU.STORE_CARD);
-                    debitCardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.VISIBLE);
+                    cardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.VISIBLE);
                 } else {
                     getArguments().remove(PayU.STORE_CARD);
-                    debitCardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.GONE);
+                    cardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.GONE);
                 }
 
             }
         });
 
-        debitCardDetails.findViewById(R.id.makePayment).setOnClickListener(new View.OnClickListener() {
+        cardDetails.findViewById(R.id.makePayment).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Params requiredParams = new Params();
-                String cardNumber = ((TextView) debitCardDetails.findViewById(R.id.cardNumberEditText)).getText().toString();
+
+                String nameOnCard = ((TextView) cardDetails.findViewById(R.id.nameOnCardEditText)).getText().toString();
+                if(nameOnCard.length() < 3){
+                    nameOnCard = "PayU " + nameOnCard;
+                }
 
                 requiredParams.put(PayU.CARD_NUMBER, cardNumber);
                 requiredParams.put(PayU.EXPIRY_MONTH, String.valueOf(expiryMonth));
                 requiredParams.put(PayU.EXPIRY_YEAR, String.valueOf(expiryYear));
-                requiredParams.put(PayU.CARDHOLDER_NAME, ((TextView) debitCardDetails.findViewById(R.id.nameOnCardEditText)).getText().toString());
-                requiredParams.put(PayU.CVV, ((TextView) debitCardDetails.findViewById(R.id.cvvEditText)).getText().toString());
+                requiredParams.put(PayU.CARDHOLDER_NAME, nameOnCard);
+                requiredParams.put(PayU.CVV, cvv);
 
                 if (getArguments().getString(PayU.STORE_CARD) != null) { // this comes from the stored card fragment.
                     requiredParams.put("card_name", cardName);
                     requiredParams.put(PayU.STORE_CARD, "1");
                 }
 
-                startPaymentProcessActivity(PayU.PaymentMode.DC, requiredParams);
-
-
+                startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
             }
         });
 
-        return debitCardDetails;
+        return cardDetails;
 
     }
 
@@ -171,12 +199,12 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
         cvvDrawable = getResources().getDrawable(R.drawable.lock);
         cardNameDrawable = getResources().getDrawable(R.drawable.user);
 
-        nameOnCardDrawable.setAlpha(100);
+//        nameOnCardDrawable.setAlpha(100);
         cardNumberDrawable.setAlpha(100);
         calenderDrawable.setAlpha(100);
         cvvDrawable.setAlpha(100);
 
-        ((TextView) getActivity().findViewById(R.id.enterCardDetailsTextView)).setText(getString(R.string.enter_debit_card_details));
+//        ((TextView) getActivity().findViewById(R.id.enterCardDetailsTextView)).setText(getString(R.string.enter_debit_card_details));
 
         ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, nameOnCardDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNumberDrawable, null);
@@ -192,7 +220,7 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-                cardName = ((EditText) getActivity().findViewById(R.id.cardNameEditText)).getText().toString();
+                cardName = charSequence.toString();
             }
 
             @Override
@@ -202,7 +230,7 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
         });
 
 
-        ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).addTextChangedListener(new TextWatcher() {
+       /* ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
 
@@ -210,12 +238,12 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-                nameOnCard = ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).getText().toString();
+                nameOnCard = charSequence.toString();
                 if (nameOnCard.length() > 1) {
-                    isNameOnCardValid = true;
+//                    isNameOnCardValid = true;
                     valid(((EditText) getActivity().findViewById(R.id.nameOnCardEditText)), nameOnCardDrawable);
                 } else {
-                    isNameOnCardValid = false;
+//                    isNameOnCardValid = false;
                     invalid(((EditText) getActivity().findViewById(R.id.nameOnCardEditText)), nameOnCardDrawable);
                 }
             }
@@ -224,34 +252,49 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
             public void afterTextChanged(Editable editable) {
 
             }
-        });
+        });*/
 
         ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-
+                ((EditText)getActivity().findViewById(R.id.cvvEditText)).getText().clear();
             }
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-                cardNumber = ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).getText().toString();
+                cardNumber = charSequence.toString();
 
-                if (cardNumber.startsWith("34") || cardNumber.startsWith("37"))
+                issuer = Cards.getIssuer(cardNumber);
+
+                if(issuer.contentEquals("AMEX")){
                     ((EditText) getActivity().findViewById(R.id.cvvEditText)).setFilters(new InputFilter[]{new InputFilter.LengthFilter(4)});
-                else
+                }else{
                     ((EditText) getActivity().findViewById(R.id.cvvEditText)).setFilters(new InputFilter[]{new InputFilter.LengthFilter(3)});
+                }
+                if(issuer != null){
+                    issuerDrawable = Cards.ISSUER_DRAWABLE.get(issuer);
+                }
 
-
-                if (SetupCardDetails.findIssuer(cardNumber, "DC") == "MAES") {
+                if (issuer.contentEquals("SMAE")) {
                     // disable cvv and expiry
                     getActivity().findViewById(R.id.expiryCvvLinearLayout).setVisibility(View.GONE);
                     getActivity().findViewById(R.id.haveCvvExpiryLinearLayout).setVisibility(View.VISIBLE);
                     getActivity().findViewById(R.id.dontHaveCvvExpiryLinearLayout).setVisibility(View.GONE);
-                    if (cardNumber.length() > 11 && Luhn.validate(cardNumber)) {
+                    if (Cards.validateCardNumber(cardNumber)) {
                         isCardNumberValid = true;
+                        if(PayU.issuingBankDownBin != null && PayU.issuingBankDownBin.has(cardNumber.substring(0, 6))){// oops bank is down.
+                            try {
+                                ((TextView)getActivity().findViewById(R.id.issuerDownTextView)).setText(PayU.issuingBankDownBin.getString(cardNumber.substring(0,6)));
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                            getActivity().findViewById(R.id.issuerDownTextView).setVisibility(View.VISIBLE);
+                        }else{
+                            getActivity().findViewById(R.id.issuerDownTextView).setVisibility(View.GONE);
+                        }
                         if (getActivity().getIntent().getExtras().getString(PayU.OFFER_KEY) != null)
                             checkOffer(cardNumber, getActivity().getIntent().getExtras().getString(PayU.OFFER_KEY));
-                        valid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), SetupCardDetails.getCardDrawable(getResources(), cardNumber));
+                        valid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), issuerDrawable);
                     } else {
                         isCardNumberValid = false;
                         invalid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), cardNumberDrawable);
@@ -263,17 +306,36 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
                     getActivity().findViewById(R.id.expiryCvvLinearLayout).setVisibility(View.VISIBLE);
                     getActivity().findViewById(R.id.haveCvvExpiryLinearLayout).setVisibility(View.GONE);
                     getActivity().findViewById(R.id.dontHaveCvvExpiryLinearLayout).setVisibility(View.GONE);
-                    if (cardNumber.length() > 11 && Luhn.validate(cardNumber)) {
+                    if (Cards.validateCardNumber(cardNumber)) {
+
                         isCardNumberValid = true;
+
+                        if(PayU.issuingBankDownBin != null && PayU.issuingBankDownBin.has(cardNumber.substring(0, 6))){// oops bank is down.
+                            try {
+                                ((TextView)getActivity().findViewById(R.id.issuerDownTextView)).setText("We are experiencing high failure rate for "+PayU.issuingBankDownBin.getString(cardNumber.substring(0,6)) + " cards at this time. We recommend you pay using any other means of payment.");
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                            getActivity().findViewById(R.id.issuerDownTextView).setVisibility(View.VISIBLE);
+                        }else{
+                            getActivity().findViewById(R.id.issuerDownTextView).setVisibility(View.GONE);
+                        }
+
                         if (getActivity().getIntent().getExtras().getString(PayU.OFFER_KEY) != null)
                             checkOffer(cardNumber, getActivity().getIntent().getExtras().getString(PayU.OFFER_KEY));
-                        valid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), SetupCardDetails.getCardDrawable(getResources(), cardNumber));
+                        valid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), issuerDrawable);
                     } else {
                         isCardNumberValid = false;
                         invalid(((EditText) getActivity().findViewById(R.id.cardNumberEditText)), cardNumberDrawable);
                         cardNumberDrawable.setAlpha(100);
                         resetHeader();
                     }
+                }
+
+                // lets set the issuer drawable.
+
+                if(issuer != null && issuerDrawable != null){
+                    ((EditText)getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, issuerDrawable, null);
                 }
 
             }
@@ -287,33 +349,18 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
         ((EditText) getActivity().findViewById(R.id.cvvEditText)).addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-
+                charSequence.toString();
             }
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-                cvv = ((EditText) getActivity().findViewById(R.id.cvvEditText)).getText().toString();
-                if (cardNumber.startsWith("34") || cardNumber.startsWith("37")) {
-                    if (cvv.length() == 4) {
-                        //valid
-                        isCvvValid = true;
-                        valid(((EditText) getActivity().findViewById(R.id.cvvEditText)), cvvDrawable);
-
-                    } else {
-                        //invalid
-                        isCvvValid = false;
-                        invalid(((EditText) getActivity().findViewById(R.id.cvvEditText)), cvvDrawable);
-                    }
-                } else {
-                    if (cvv.length() == 3) {
-                        //valid
-                        isCvvValid = true;
-                        valid(((EditText) getActivity().findViewById(R.id.cvvEditText)), cvvDrawable);
-                    } else {
-                        //invalid
-                        isCvvValid = false;
-                        invalid(((EditText) getActivity().findViewById(R.id.cvvEditText)), cvvDrawable);
-                    }
+                cvv = charSequence.toString();
+                if(Cards.validateCvv(cardNumber, cvv)){
+                    isCvvValid = true;
+                    valid(((EditText) getActivity().findViewById(R.id.cvvEditText)), cvvDrawable);
+                }else{
+                    isCvvValid = false;
+                    invalid(((EditText) getActivity().findViewById(R.id.cvvEditText)), cvvDrawable);
                 }
             }
 
@@ -393,7 +440,7 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
             isExpired = false;
             isCvvValid = true;
         }
-        if (isCardNumberValid && !isExpired && isCvvValid && isNameOnCardValid) {
+        if (isCardNumberValid && !isExpired && isCvvValid ) {
             getActivity().findViewById(R.id.makePayment).setEnabled(true);
 //            getActivity().findViewById(R.id.makePayment).setBackgroundResource(R.drawable.button_enabled);
         } else {
@@ -412,8 +459,8 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
     private void makeInvalid() {
         if (!isCardNumberValid && cardNumber.length() > 0 && !getActivity().findViewById(R.id.cardNumberEditText).isFocused())
             ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);
-        if (!isNameOnCardValid && nameOnCard.length() > 0 && !getActivity().findViewById(R.id.nameOnCardEditText).isFocused())
-            ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);
+       /* if (!isNameOnCardValid && nameOnCard.length() > 0 && !getActivity().findViewById(R.id.nameOnCardEditText).isFocused())
+            ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);*/
         if (!isCvvValid && cvv.length() > 0 && !getActivity().findViewById(R.id.cvvEditText).isFocused())
             ((EditText) getActivity().findViewById(R.id.cvvEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);
     }
@@ -441,9 +488,9 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
         varList.put(PayU.VAR8, "");
 
         try {
-            postParams = PayU.getInstance(getActivity()).getParams("check_offer_status", varList);
-            StoreCardTask getStoredCards = new StoreCardTask(this);
-            getStoredCards.execute(postParams);
+            postParams = PayU.getInstance(getActivity()).getParams(Constants.OFFER_STATUS, varList);
+            GetResponseTask getOfferStatus = new GetResponseTask(this);
+            getOfferStatus.execute(postParams);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
@@ -455,23 +502,26 @@ public class DebitCardDetailsFragment extends ProcessPaymentFragment implements 
     }
 
     @Override
-    public void onGetAvailableBanks(JSONArray response) {
+    public void onGetResponse(String responseMessage) {
 
-    }
+        if(responseMessage.startsWith("Error:")){
+            Intent intent = new Intent();
+            intent.putExtra("result", responseMessage);
+            getActivity().setResult(Activity.RESULT_CANCELED, intent);
+            getActivity().finish();
+        }
 
-    @Override
-    public void onGetStoreCardDetails(JSONArray response) {
         try {
-            if (response.getJSONObject(0).getInt("status") == 1 && getActivity().findViewById(R.id.offerMessageTextView) != null) {
+            if (PayU.offerStatus != null && PayU.offerStatus.getJSONObject(0).getInt("status") == 1 && getActivity().findViewById(R.id.offerMessageTextView) != null) {
 
-                ((TextView) getActivity().findViewById(R.id.offerMessageTextView)).setText(getString(R.string.eligible_for_discount, response.getJSONObject(0).getDouble("discount")));
+                ((TextView) getActivity().findViewById(R.id.offerMessageTextView)).setText(getString(R.string.eligible_for_discount, PayU.offerStatus.getJSONObject(0).getDouble("discount")));
                 // change amount
                 ((TextView) getActivity().findViewById(R.id.amountTextView)).setPaintFlags(Paint.STRIKE_THRU_TEXT_FLAG);
                 ((TextView) getActivity().findViewById(R.id.amountTextView)).setGravity(Gravity.RIGHT);
                 ((TextView) getActivity().findViewById(R.id.amountTextView)).setTextColor(Color.GRAY);
                 getActivity().findViewById(R.id.offerAmountTextView).setVisibility(View.VISIBLE);
-                ((TextView) getActivity().findViewById(R.id.offerAmountTextView)).setText(getString(R.string.amount, getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT) - response.getJSONObject(0).getDouble("discount")));
-                ((TextView) getActivity().findViewById(R.id.amountTextView)).setText(String.valueOf(getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT) - response.getJSONObject(0).getDouble("discount")));
+                ((TextView) getActivity().findViewById(R.id.offerAmountTextView)).setText(getString(R.string.amount, getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT) - PayU.offerStatus.getJSONObject(0).getDouble("discount")));
+                ((TextView) getActivity().findViewById(R.id.amountTextView)).setText(String.valueOf(getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT) - PayU.offerStatus.getJSONObject(0).getDouble("discount")));
             }
         } catch (JSONException e) {
             e.printStackTrace();

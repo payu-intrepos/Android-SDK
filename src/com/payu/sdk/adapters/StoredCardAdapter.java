@@ -54,16 +54,16 @@ public class StoredCardAdapter extends BaseAdapter {
             LayoutInflater mInflater = (LayoutInflater) mContext
                     .getSystemService(Activity.LAYOUT_INFLATER_SERVICE);
 //            view = mInflater.inflate(R.layout.stored_card_details_list_items, null);
-            view = mInflater.inflate(R.layout.payment_options_list_items, null);
+            view = mInflater.inflate(R.layout.store_card_item, null);
         }
 
         JSONObject jsonObject = (JSONObject) getItem(i);
 
         // set text here
         try {
-
-            ((TextView) view.findViewById(R.id.paymentOptionsTitle)).setText(jsonObject.getString("card_no"));
-            ((TextView) view.findViewById(R.id.paymentOptionsTitle)).setCompoundDrawablesWithIntrinsicBounds(null, null, mContext.getResources().getDrawable(R.drawable.arrow), null);
+            ((TextView) view.findViewById(R.id.cardLabelTextView)).setText(jsonObject.getString("card_name"));
+            ((TextView) view.findViewById(R.id.cardNumberTextView)).setText(jsonObject.getString("card_no"));
+            ((TextView) view.findViewById(R.id.cardNumberTextView)).setCompoundDrawablesWithIntrinsicBounds(null, null, mContext.getResources().getDrawable(R.drawable.arrow), null);
 
         } catch (JSONException e) {
             e.printStackTrace();

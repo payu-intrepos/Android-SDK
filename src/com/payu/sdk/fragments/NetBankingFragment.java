@@ -9,18 +9,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.payu.sdk.Constants;
 import com.payu.sdk.GetResponseTask;
 import com.payu.sdk.Params;
 import com.payu.sdk.PayU;
-import com.payu.sdk.Payment;
 import com.payu.sdk.PaymentListener;
 import com.payu.sdk.R;
 import com.payu.sdk.adapters.NetBankingAdapter;
 
 import org.apache.http.NameValuePair;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -47,7 +47,6 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-
 
         View netBankingFragment = inflater.inflate(R.layout.fragment_net_banking, container, false);
 
@@ -78,7 +77,6 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
             setupAdapter();
         } else {
             // fetch
-
             mProgressDialog.setMessage(getString(R.string.please_wait));
             mProgressDialog.setIndeterminate(true);
             mProgressDialog.setCancelable(false);
@@ -86,11 +84,16 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
 
             List<NameValuePair> postParams = null;
 
-            HashMap<String, String> varList = new HashMap<String, String>();
-            varList.put(Constants.VAR1, Constants.DEFAULT);
+            HashMap varList = new HashMap();
+
+            if(getActivity().getIntent().getExtras().getString("user_credentials") == null){// ok we dont have a user credentials.
+                varList.put(Constants.VAR1, Constants.DEFAULT);
+            }else{
+                varList.put(Constants.VAR1, getActivity().getIntent().getExtras().getString("user_credentials"));
+            }
 
             try {
-                postParams = PayU.getInstance(getActivity()).getParams(Constants.GET_IBIBO_CODES, varList);
+                postParams = PayU.getInstance(getActivity()).getParams(Constants.PAYMENT_RELATED_DETAILS, varList);
                 GetResponseTask getResponse = new GetResponseTask(NetBankingFragment.this);
                 getResponse.execute(postParams);
             } catch (NoSuchAlgorithmException e) {
@@ -98,12 +101,24 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
             }
         }
 
-        /*getActivity().findViewById(R.id.cancelButton).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                getActivity().getSupportFragmentManager().popBackStack();
+
+        if(Constants.ENABLE_VAS && PayU.netBankingStatus == null){
+            HashMap<String, String> varList = new HashMap<String, String>();
+
+            varList.put("var1", "default");
+            varList.put("var2", "default");
+            varList.put("var3", "default");
+
+            List<NameValuePair> postParams = null;
+
+            try {
+                postParams = PayU.getInstance(getActivity()).getParams(Constants.GET_VAS, varList);
+                GetResponseTask getResponse = new GetResponseTask(NetBankingFragment.this);
+                getResponse.execute(postParams);
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
             }
-        });*/
+        }
 
     }
 
@@ -120,13 +135,21 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
 
                 try {
                     bankCode = ((JSONObject) adapterView.getAdapter().getItem(i)).getString("code");
-                    if (bankCode.contentEquals("null")) {
+
+
+                    if (bankCode.contentEquals("default")) {
                         //disable the button
 //                        getActivity().findViewById(R.id.nbPayButton).setBackgroundResource(R.drawable.button);
                         getActivity().findViewById(R.id.nbPayButton).setEnabled(false);
                     } else {
                         //enable the button
 //                        getActivity().findViewById(R.id.nbPayButton).setBackgroundResource(R.drawable.button_enabled);
+                        if(PayU.netBankingStatus != null && PayU.netBankingStatus.get(bankCode) == 0){
+                            ((TextView)getActivity().findViewById(R.id.netBankingErrorText)).setText("Oops! " + ((JSONObject) adapterView.getAdapter().getItem(i)).getString("title") + " seems to be down. We recommend you pay using any other means of payment." );
+                            getActivity().findViewById(R.id.netBankingErrorText).setVisibility(View.VISIBLE);
+                        }else{
+                            getActivity().findViewById(R.id.netBankingErrorText).setVisibility(View.GONE);
+                        }
                         getActivity().findViewById(R.id.nbPayButton).setEnabled(true);
                     }
                 } catch (JSONException e) {
@@ -148,14 +171,14 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
     }
 
     @Override
-    public void onGetAvailableBanks(JSONArray response) {
+    public void onGetResponse(String responseMessage) {
         // setup adapter
-        mProgressDialog.dismiss();
-        setupAdapter();
+        if(mProgressDialog.isShowing())
+            mProgressDialog.dismiss();
+        if(PayU.availableBanks != null)
+            setupAdapter();
+        if(Constants.DEBUG)
+            Toast.makeText(getActivity(), responseMessage, Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    public void onGetStoreCardDetails(JSONArray response) {
-
-    }
 }

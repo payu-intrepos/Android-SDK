@@ -3,12 +3,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="com.payu.sdk.fragments.CreditCardDetailsFragment">
+    tools:context="com.payu.sdk.fragments.CardFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/issuerDownTextView"
+            android:textColor="#FF0000"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:layout_margin="10dp"
+            android:background="@drawable/error_box"
+            android:visibility="gone"/>
 
         <include layout="@layout/card_details_layout"/>
 
@@ -56,10 +67,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/dontHaveCvvAndExpiryTextView"
-                android:text="@string/if_cvv_and_expiry_on_card"/>
+                android:text="@string/if_dont_cvv_and_expiry_on_card"/>
 
         </LinearLayout>
-
 
         <Button
             android:layout_width="match_parent"

@@ -4,7 +4,14 @@ package com.payu.sdk;
  * Created by franklin on 8/7/14.
  */
 public class Constants {
-    public static final boolean DEBUG = true;
+
+    public static final boolean DEBUG = false; // true for test env, false for prod env.
+    public static final boolean SDK_HASH_GENERATION = true;
+
+    public static final boolean ENABLE_VAS = true;
+    public static final boolean SET_DEFAULT_NET_BANKING = true;
+    public static final boolean SET_DEFAULT_CASH_CARD = true;
+
 
     public static final String HASH = "hash";
     public static final String POST_DATA = "postData";
@@ -21,6 +28,9 @@ public class Constants {
     public static final String EDIT_USER_CARD = "edit_user_card";
     public static final String GET_IBIBO_CODES = "get_merchant_ibibo_codes";
     public static final String SAVE_USER_CARD = "save_user_card";
+    public static final String OFFER_STATUS = "check_offer_status";
+    public static final String GET_VAS = "vas_for_mobile_sdk";
+    public static final String PAYMENT_RELATED_DETAILS = "payment_related_details_for_mobile_sdk";
 
 
     public static final String VAR1 = "var1";
@@ -33,11 +43,13 @@ public class Constants {
     public static final String VAR8 = "var8";
     public static final String VAR9 = "var9";
 
-    // urls
 
-    private static final String TEST_PAYMENT_URL = "https://test.payu.in/_payment";
+    // mobile dedicated test env
+    private static final String TEST_PAYMENT_URL =  "https://mobiletest.payu.in/_payment";
+    private static final String TEST_FETCH_DATA_URL = "https://mobiletest.payu.in/merchant/postservice?form=2";
+
+    // production
     private static final String PRODUCTION_PAYMENT_URL = "https://secure.payu.in/_payment";
-    private static final String TEST_FETCH_DATA_URL = "https://test.payu.in/merchant/postservice?form=2";
     private static final String PRODUCTION_FETCH_DATA_URL = "https://info.payu.in/merchant/postservice.php?form=2";
 
     public static final String FETCH_DATA_URL = DEBUG ? TEST_FETCH_DATA_URL : PRODUCTION_FETCH_DATA_URL;

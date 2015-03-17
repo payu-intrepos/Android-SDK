@@ -54,7 +54,7 @@ public class PaymentModeAdapter extends BaseAdapter {
             txtTitle.setText("Net banking");
         } else if (getItem(position).toString().contentEquals("CC")) {
             txtTitle.setCompoundDrawablesWithIntrinsicBounds(mContext.getResources().getDrawable(R.drawable.card), null, mContext.getResources().getDrawable(R.drawable.arrow), null);
-            txtTitle.setText("Credit card");
+            txtTitle.setText("Credit / Debit card");
         } else if (getItem(position).toString().contentEquals("DC")) {
             txtTitle.setCompoundDrawablesWithIntrinsicBounds(mContext.getResources().getDrawable(R.drawable.card), null, mContext.getResources().getDrawable(R.drawable.arrow), null);
             txtTitle.setText("Debit card");
@@ -70,11 +70,11 @@ public class PaymentModeAdapter extends BaseAdapter {
         } else if (getItem(position).toString().contentEquals("PAYU_MONEY")) {
             txtTitle.setCompoundDrawablesWithIntrinsicBounds(mContext.getResources().getDrawable(R.drawable.payu_money), null, mContext.getResources().getDrawable(R.drawable.arrow), null);
             txtTitle.setText("PayU money");
-        } else {
+        }/* else {
             txtTitle.setCompoundDrawablesWithIntrinsicBounds(mContext.getResources().getDrawable(R.drawable.ic_action_add_person), null, mContext.getResources().getDrawable(R.drawable.arrow), null);
 //        txtTitle.setText(PayU.PAYMENT_MODE_TITLES.get(getItem(position)));
             txtTitle.setText(getItem(position).toString());
-        }
+        }*/
 
         return convertView;
     }

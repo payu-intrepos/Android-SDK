@@ -8,15 +8,12 @@ import android.widget.TextView;
 
 import com.payu.sdk.exceptions.HashException;
 import com.payu.sdk.exceptions.MissingParameterException;
+import com.payu.sdk.fragments.CardsFragment;
 import com.payu.sdk.fragments.CashCardFragment;
-import com.payu.sdk.fragments.CreditCardDetailsFragment;
-import com.payu.sdk.fragments.DebitCardDetailsFragment;
 import com.payu.sdk.fragments.EmiDetailsFragment;
 import com.payu.sdk.fragments.NetBankingFragment;
 import com.payu.sdk.fragments.PaymentOptionsFragment;
 import com.payu.sdk.fragments.StoredCardFragment;
-
-import org.json.JSONArray;
 
 
 public class PaymentOptionsActivity extends FragmentActivity implements PaymentListener {
@@ -78,16 +75,9 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
                 transaction.commit();
                 break;
             case CC:
-                CreditCardDetailsFragment creditCardFragment = new CreditCardDetailsFragment();
-                creditCardFragment.setArguments(bundle);
-                transaction.replace(R.id.fragmentContainer, creditCardFragment);
-                transaction.addToBackStack(null);
-                transaction.commit();
-                break;
-            case DC:
-                DebitCardDetailsFragment debitCardDetailsFragment = new DebitCardDetailsFragment();
-                debitCardDetailsFragment.setArguments(bundle);
-                transaction.replace(R.id.fragmentContainer, debitCardDetailsFragment);
+                CardsFragment cardsFragment = new CardsFragment();
+                cardsFragment.setArguments(bundle);
+                transaction.replace(R.id.fragmentContainer, cardsFragment);
                 transaction.addToBackStack(null);
                 transaction.commit();
                 break;
@@ -149,14 +139,10 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
         startActivityForResult(intent, PayU.RESULT);    }
 
     @Override
-    public void onGetAvailableBanks(JSONArray response) {
+    public void onGetResponse(String responseMessage) {
 
     }
 
-    @Override
-    public void onGetStoreCardDetails(JSONArray response) {
-
-    }
 
     @Override
     public void onDestroy() {
@@ -175,4 +161,8 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+    }
 }

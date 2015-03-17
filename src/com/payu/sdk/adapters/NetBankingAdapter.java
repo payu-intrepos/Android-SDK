@@ -56,6 +56,9 @@ public class NetBankingAdapter extends BaseAdapter {
 
         JSONObject jsonObject = (JSONObject) getItem(position);
         try {
+/*            if(PayU.netBankingStatus != null && PayU.netBankingStatus.get(jsonObject.getString("code")) != null && PayU.netBankingStatus.get(jsonObject.getString("code")) == 0){
+                ((TextView) view).setTextColor(Color.parseColor("#FF0000"));
+            }*/
             ((TextView) view).setText(jsonObject.getString("title"));
         } catch (JSONException e) {
             e.printStackTrace();

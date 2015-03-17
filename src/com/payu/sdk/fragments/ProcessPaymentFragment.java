@@ -28,7 +28,6 @@ public class ProcessPaymentFragment extends Fragment {
 
             payment = builder.create();
 
-
             String postData = PayU.getInstance(getActivity()).createPayment(payment, requiredParams);
 
             Intent intent = new Intent(getActivity(), ProcessPaymentActivity.class);

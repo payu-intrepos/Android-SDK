@@ -6,8 +6,8 @@ android {
     defaultConfig {
         minSdkVersion 9
         targetSdkVersion 21
-        versionCode 1
-        versionName '1.0'
+        versionCode 2
+        versionName '2.0'
     }
 
     buildTypes {
@@ -27,9 +27,9 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:support-v4:21.0.3'
     //    compile files('libs/CustomBrowser.aar')
     //    compile(name:'CustomBrowser', ext:'aar')
     //    compile project(':CustomBrowser')
+    compile 'com.android.support:support-v4:21.0.3'
     compile project(':CustomBrowser')
 }

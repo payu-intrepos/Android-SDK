@@ -22,7 +22,8 @@
     <string name="netbankingNote">Note: In the next step you will be redirect to your bank website to verify your account</string>
     <string name="cashCardNote">Note: In the next step you will be redirected to your bank\'s website to verify yourself.</string>
     <string name="click_here">Click here</string>
-    <string name="if_cvv_and_expiry_on_card">if you have CVV and Expiry on your card</string>
+    <string name="if_cvv_and_expiry_on_card"> &#160;if you have CVV and Expiry on your card</string>
+    <string name="if_dont_cvv_and_expiry_on_card"> &#160;if you don\'t have CVV and Expiry on your card</string>
     <string name="please_wait">Please Wait</string>
     <string name="something_went_wrong">Something went wrong</string>
     <string name="status">Status</string>
@@ -31,5 +32,6 @@
     <string name="enter_credit_card_details">Please enter credit card details</string>
     <string name="enter_debit_card_details">Please enter debit card details</string>
     <string name="store_card_check">Store this card</string>
-
+    <string name="process_your_request">Processing Your Request</string>
+    <string name="slow_connection">Slow Network.\nStill Connecting...</string>
 </resources>

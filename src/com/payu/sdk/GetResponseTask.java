@@ -18,6 +18,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -26,322 +27,422 @@ import java.util.Set;
 /**
  * Created by franklin on 10/7/14.
  */
-public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, JSONArray> {
+public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, String> {
 
     PaymentListener mResponseListener = null;
+    JSONObject response;
+    private String localException = "";
+
+
 
     public GetResponseTask(PaymentListener responseListener) {
         this.mResponseListener = responseListener;
     }
 
     @Override
-    protected JSONArray doInBackground(List<NameValuePair>... lists) {
+    protected String doInBackground(List<NameValuePair>... lists) {
 
         HttpClient httpclient = new DefaultHttpClient();
         HttpPost httppost = new HttpPost(Constants.FETCH_DATA_URL);
 
-        Set<String> enforcePayMethodsSet = new HashSet<String>();
-
-        Set<String> dropCategoriesSet = new HashSet<String>();
-
-        if (PayU.enforcePayMethod != null) {
-            String[] enforcePayMethodsArray = PayU.enforcePayMethod.split("\\|");
-            for (int i = 0; i < enforcePayMethodsArray.length; i++) {
-                enforcePayMethodsSet.add(enforcePayMethodsArray[i]);
-            }
-        }
-
-
-        if (PayU.dropCategory != null) {
-            String[] categories = PayU.dropCategory.split(",");
-            for (int i = 0; i < categories.length; i++) {
-                String[] splitCategories = categories[i].split("\\|");
-                for (int j = 0; j < splitCategories.length; j++) {
-                    dropCategoriesSet.add(splitCategories[j]);
-                }
-            }
-        }
+//        make api call here
 
         try {
-
-            JSONArray banksAvailable = new JSONArray();
-            JSONArray emiAvailable = new JSONArray();
-            JSONArray modesAvailable = new JSONArray();
-            JSONArray cashCardsAvailable = new JSONArray();
-            JSONArray creditCardsAvailable = new JSONArray();
-            JSONArray debitCardsAvailable = new JSONArray();
-
-            Boolean ccPresent = false;
-            Boolean dcPresent = false;
-            Boolean nbPresent = false;
-            Boolean emiPresent = false;
-            Boolean cashCardPresent = false;
-
             httppost.setEntity(new UrlEncodedFormEntity(lists[0]));
-
-            JSONObject response = new JSONObject(EntityUtils.toString(httpclient.execute(httppost).getEntity()));
-
-
-            // banks available, enforce method
-            if (response.has("netbanking")) {
-                Iterator<String> bankKeysIterator = response.getJSONObject("netbanking").keys();
-
-                // for default option
-                JSONObject banksObject = new JSONObject();
-                banksObject.put("code", "null");
-                banksObject.put("title", "");
-                banksAvailable.put(banksObject);
-
-                if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("netbanking")) {
-                    while (bankKeysIterator.hasNext()) {
-                        String bankCode = (String) bankKeysIterator.next();
-                        if (!dropCategoriesSet.contains(bankCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("code", bankCode);
-                            jsonObject.put("title", response.getJSONObject("netbanking").getJSONObject(bankCode).get("title"));
-                            banksAvailable.put(jsonObject);
-                        }
-                    }
-                    nbPresent = true;
-                } else {
-                    while (bankKeysIterator.hasNext()) {
-                        String bankCode = (String) bankKeysIterator.next();
-                        if (enforcePayMethodsSet.contains(bankCode) && !dropCategoriesSet.contains(bankCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("code", bankCode);
-                            jsonObject.put("title", response.getJSONObject("netbanking").getJSONObject(bankCode).get("title"));
-                            banksAvailable.put(jsonObject);
-                            nbPresent = true;
-                        }
-                    }
-                }
-
-                // set default option
-                PayU.availableBanks = jsonArraySort(banksAvailable, "title");
-                banksObject = new JSONObject();
-                banksObject.put("code", "null");
-                banksObject.put("title", "Select your bank");
-                PayU.availableBanks.put(0, banksObject);
-
-            }
-
-            //emi available, enforce method check
-            /*Iterator<String> emiKeysIterator = response.getJSONObject("emi").keys();
-            if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("Emi")) {
-                while (emiKeysIterator.hasNext()) {
-                    String emiCode = (String) emiKeysIterator.next();
-                    if (!dropCategoriesSet.contains(emiCode)) {
-                        JSONObject jsonObject = new JSONObject();
-                        JSONArray jsonArray = new JSONArray();
-                        JSONObject object = new JSONObject();
-                        jsonObject.put("emiCode", emiCode);
-                        jsonObject.put("emiInterval", response.getJSONObject("emi").getJSONObject(emiCode).get("title").toString());
-                        jsonObject.put("bankName", response.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString());
-                        jsonArray.put(jsonObject);
-                        object.put(response.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString(), jsonArray);
-                        emiAvailable.put(object);
-                    }
-                }
-                emiPresent = true;
-            } else {
-                while (emiKeysIterator.hasNext()) {
-                    String emiCode = (String) emiKeysIterator.next();
-                    if (enforcePayMethodsSet.contains(emiCode) && !dropCategoriesSet.contains(emiCode)) {
-                        JSONObject jsonObject = new JSONObject();
-                        JSONArray jsonArray = new JSONArray();
-                        JSONObject object = new JSONObject();
-                        jsonObject.put("emiCode", emiCode);
-                        jsonObject.put("emiInterval", response.getJSONObject("emi").getJSONObject(emiCode).get("title").toString());
-                        jsonObject.put("bankName", response.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString());
-                        jsonArray.put(jsonObject);
-                        object.put(response.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString(), jsonArray);
-                        emiAvailable.put(object);
-                        emiPresent = true;
-                    }
-                }
-            }*/
-
-            if (response.has("emi")) {
-                Iterator<String> emiKeysIterator = response.getJSONObject("emi").keys();
-                if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("Emi")) {
-                    while (emiKeysIterator.hasNext()) {
-                        String emiCode = (String) emiKeysIterator.next();
-                        if (!dropCategoriesSet.contains(emiCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("emiCode", emiCode);
-                            jsonObject.put("emiInterval", response.getJSONObject("emi").getJSONObject(emiCode).get("title").toString());
-                            jsonObject.put("bankName", response.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString());
-                            emiAvailable.put(jsonObject);
-                        }
-                    }
-                    emiPresent = true;
-                } else {
-                    while (emiKeysIterator.hasNext()) {
-                        String emiCode = (String) emiKeysIterator.next();
-                        if (enforcePayMethodsSet.contains(emiCode) && !dropCategoriesSet.contains(emiCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("emiCode", emiCode);
-                            jsonObject.put("emiInterval", response.getJSONObject("emi").getJSONObject(emiCode).get("title").toString());
-                            jsonObject.put("bankName", response.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString());
-                            emiAvailable.put(jsonObject);
-                            emiPresent = true;
-                        }
-                    }
-                }
-                PayU.availableEmi = jsonArraySort(emiAvailable, "bankName");
-            }
-
-
-            // cash card available, enforce pay method
-
-            if (response.has("cashcard")) {
-                Iterator<String> cashCardIterator = response.getJSONObject("cashcard").keys();
-                // for default options
-
-                JSONObject cashObject = new JSONObject();
-                cashObject.put("code", "null");
-                cashObject.put("name", "");
-                cashCardsAvailable.put(cashObject);
-
-                if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("cashcard")) {
-                    while (cashCardIterator.hasNext()) {
-                        String cashCardCode = cashCardIterator.next();
-                        if (!dropCategoriesSet.contains(cashCardCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("code", cashCardCode);
-                            jsonObject.put("name", response.getJSONObject("cashcard").getJSONObject(cashCardCode).getString("title"));
-                            cashCardsAvailable.put(jsonObject);
-                        }
-                    }
-                    cashCardPresent = true;
-                } else {
-                    while (cashCardIterator.hasNext()) {
-                        String cashCardCode = cashCardIterator.next();
-                        JSONObject jsonObject = new JSONObject();
-                        if (enforcePayMethodsSet.contains(cashCardCode) && !dropCategoriesSet.contains(cashCardCode)) {
-                            jsonObject.put("code", cashCardCode);
-                            jsonObject.put("name", response.getJSONObject("cashcard").getJSONObject(cashCardCode).getString("title"));
-                            cashCardsAvailable.put(jsonObject);
-                            cashCardPresent = true;
-                        }
-                    }
-                }
-
-                // for default select option
-
-                PayU.availableCashCards = jsonArraySort(cashCardsAvailable, "name");
-                cashObject = new JSONObject();
-                cashObject.put("code", "null");
-                cashObject.put("name", "Select your cash card");
-                PayU.availableCashCards.put(0, cashObject);
-
-            }
-
-            if (response.has("creditcard")) {
-                //   available credit cardsy
-                Iterator<String> creditCardIterator = response.getJSONObject("creditcard").keys();
-                if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("creditcard")) {
-                    while (creditCardIterator.hasNext()) {
-                        String creditCardCode = creditCardIterator.next();
-                        if (!dropCategoriesSet.contains(creditCardCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("code", creditCardCode);
-                            jsonObject.put("name", response.getJSONObject("creditcard").getJSONObject(creditCardCode).getString("title"));
-                            creditCardsAvailable.put(jsonObject);
-                        }
-                    }
-                    ccPresent = true;
-                } else {
-                    while (creditCardIterator.hasNext()) {
-                        String creditCardCode = creditCardIterator.next();
-                        if (enforcePayMethodsSet.contains(creditCardCode) && !dropCategoriesSet.contains(creditCardCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("code", creditCardCode);
-                            jsonObject.put("name", response.getJSONObject("creditcard").getJSONObject(creditCardCode).getString("title"));
-                            creditCardsAvailable.put(jsonObject);
-                            ccPresent = true;
-                        }
-                    }
-                }
-                PayU.availableCreditCards = creditCardsAvailable;
-
-            }
-
-            if (response.has("debitcard")) {
-                // available debit cards
-
-                Iterator<String> debitCardIterator = response.getJSONObject("debitcard").keys();
-                if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("debitcard")) {
-                    while (debitCardIterator.hasNext()) {
-                        String debitCardCode = debitCardIterator.next();
-                        if (!dropCategoriesSet.contains(debitCardCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("code", debitCardCode);
-                            jsonObject.put("name", response.getJSONObject("debitcard").getJSONObject(debitCardCode).getString("title"));
-                            debitCardsAvailable.put(jsonObject);
-                        }
-                    }
-                    dcPresent = true;
-                } else {
-                    while (debitCardIterator.hasNext()) {
-                        String debitCardCode = debitCardIterator.next();
-                        if (enforcePayMethodsSet.contains(debitCardCode) && !dropCategoriesSet.contains(debitCardCode)) {
-                            JSONObject jsonObject = new JSONObject();
-                            jsonObject.put("code", debitCardCode);
-                            jsonObject.put("name", response.getJSONObject("debitcard").getJSONObject(debitCardCode).getString("title"));
-                            debitCardsAvailable.put(jsonObject);
-                            dcPresent = true;
-                        }
-                    }
-                }
-                PayU.availableDebitCards = debitCardsAvailable;
-
-            }
-
-            // lets find the available modes
-            modesAvailable.put("STORED_CARDS");
-            if (ccPresent)
-                modesAvailable.put("CC");
-            if (dcPresent)
-                modesAvailable.put("DC");
-            if (nbPresent)
-                modesAvailable.put("NB");
-            if (emiPresent)
-                modesAvailable.put("EMI");
-            if (cashCardPresent)
-                modesAvailable.put("CASH");
-//            if (ccPresent && dcPresent)
-//                modesAvailable.put("STORED_CARDS");
-
-            // now paisa wallet left out, lets check that.
-            Iterator<String> modeKeysIterator = response.keys();
-            if ((PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("paisawallet")) && (PayU.dropCategory == null) || !dropCategoriesSet.contains("paisawallet")) {
-                while (modeKeysIterator.hasNext()) {
-                    String option = modeKeysIterator.next();
-                    if (option.contentEquals("paisawallet"))
-                        modesAvailable.put("PAYU_MONEY");
-                }
-            }
-
-            // set the time data fetched at
-            PayU.dataFetchedAt = System.currentTimeMillis();
-
-            return modesAvailable;
+            response = new JSONObject(EntityUtils.toString(httpclient.execute(httppost).getEntity()));
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
+
+            return "Error: UnsupportedEncodingException " + e.getMessage();
         } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
+            return "Error: ClientProtocolException " + e.getMessage();
         } catch (JSONException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
+            return "Error: JSONException " + e.getMessage();
+        } catch (IOException e) {
+            return "Error: IOException "+ e.getMessage();
+//            e.printStackTrace();
         }
-        return null;
+
+
+        if(response.length() > 0 && lists[0].get(1).getValue().contentEquals(Constants.PAYMENT_RELATED_DETAILS)){ // this is get ibibo codes call
+            try {
+                // we have two json objects, 1. usercards, 2. merchant ibibo codes
+                JSONObject userCards = new JSONObject();
+                JSONObject ibiboCodes = new JSONObject();
+                userCards = response.getJSONObject("userCards");
+                ibiboCodes = response.getJSONObject("ibiboCodes");
+
+                //ibibo codes
+
+                // lets reset the old values.
+                PayU.availableBanks = new JSONArray();
+                PayU.availableEmi = new JSONArray();
+                PayU.availableCashCards = new JSONArray();
+                PayU.availableModes = new JSONArray();
+                PayU.availableDebitCards = new JSONArray();
+                PayU.availableCreditCards = new JSONArray();
+
+                Boolean ccPresent = false;
+                Boolean dcPresent = false;
+                Boolean nbPresent = false;
+                Boolean emiPresent = false;
+                Boolean cashCardPresent = false;
+
+                Set<String> enforcePayMethodsSet = new HashSet<String>();
+
+                Set<String> dropCategoriesSet = new HashSet<String>();
+
+                if (PayU.enforcePayMethod != null) {
+                    String[] enforcePayMethodsArray = PayU.enforcePayMethod.split("\\|");
+                    for (int i = 0; i < enforcePayMethodsArray.length; i++) {
+                        enforcePayMethodsSet.add(enforcePayMethodsArray[i]);
+                    }
+                }
+
+                if (PayU.dropCategory != null) {
+                    String[] categories = PayU.dropCategory.split(",");
+                    for (int i = 0; i < categories.length; i++) {
+                        String[] splitCategories = categories[i].split("\\|");
+                        for (int j = 0; j < splitCategories.length; j++) {
+                            dropCategoriesSet.add(splitCategories[j]);
+                        }
+                    }
+                }
+
+
+                // banks available, enforce method
+                if (ibiboCodes.has("netbanking")) {
+                    Iterator<String> bankKeysIterator = ibiboCodes.getJSONObject("netbanking").keys();
+
+                    if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("netbanking")) {
+                        while (bankKeysIterator.hasNext()) {
+                            String bankCode = (String) bankKeysIterator.next();
+                            if (!dropCategoriesSet.contains(bankCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("code", bankCode);
+                                jsonObject.put("title", ibiboCodes.getJSONObject("netbanking").getJSONObject(bankCode).get("title"));
+//                                    banksAvailable.put(jsonObject);
+                                PayU.availableBanks.put(jsonObject);
+                            }
+                        }
+                        nbPresent = true;
+                    } else {
+                        while (bankKeysIterator.hasNext()) {
+                            String bankCode = (String) bankKeysIterator.next();
+                            if (enforcePayMethodsSet.contains(bankCode) && !dropCategoriesSet.contains(bankCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("code", bankCode);
+                                jsonObject.put("title", ibiboCodes.getJSONObject("netbanking").getJSONObject(bankCode).get("title"));
+//                                    banksAvailable.put(jsonObject);
+                                PayU.availableBanks.put(jsonObject);
+                                nbPresent = true;
+                            }
+                        }
+                    }
+
+                    // set default option, we need an empty object.
+                    JSONObject emptyObject = new JSONObject();
+                    emptyObject.put("code", " ");
+                    emptyObject.put("title", " ");
+                    PayU.availableBanks.put(0, emptyObject);
+
+                    PayU.availableBanks = jsonArraySort(PayU.availableBanks, "title");
+                    if(Constants.SET_DEFAULT_NET_BANKING){
+                        JSONObject banksObject = new JSONObject();
+                        banksObject.put("code", "default");
+                        banksObject.put("title", "Select your bank");
+                        PayU.availableBanks.put(0, banksObject);
+                    }
+
+                }
+
+                if (ibiboCodes.has("emi")) {
+                    Iterator<String> emiKeysIterator = ibiboCodes.getJSONObject("emi").keys();
+                    if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("Emi")) {
+                        while (emiKeysIterator.hasNext()) {
+                            String emiCode = (String) emiKeysIterator.next();
+                            if (!dropCategoriesSet.contains(emiCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("emiCode", emiCode);
+                                jsonObject.put("emiInterval", ibiboCodes.getJSONObject("emi").getJSONObject(emiCode).get("title").toString());
+                                jsonObject.put("bankName", ibiboCodes.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString());
+                                PayU.availableEmi.put(jsonObject);
+                            }
+                        }
+                        emiPresent = true;
+                    } else {
+                        while (emiKeysIterator.hasNext()) {
+                            String emiCode = (String) emiKeysIterator.next();
+                            if (enforcePayMethodsSet.contains(emiCode) && !dropCategoriesSet.contains(emiCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("emiCode", emiCode);
+                                jsonObject.put("emiInterval", ibiboCodes.getJSONObject("emi").getJSONObject(emiCode).get("title").toString());
+                                jsonObject.put("bankName", ibiboCodes.getJSONObject("emi").getJSONObject(emiCode).get("bank").toString());
+                                PayU.availableEmi.put(jsonObject);
+                                emiPresent = true;
+                            }
+                        }
+                    }
+
+                    // add empty array
+                    JSONObject emptyObject = new JSONObject();
+                    emptyObject.put("emiCode", " ");
+                    emptyObject.put("emiInterval", " ");
+                    emptyObject.put("bankName", " ");
+                    PayU.availableEmi = jsonArraySort(PayU.availableEmi, "bankName");
+                    JSONObject emiObject = new JSONObject();
+                    emiObject.put("emiCode", "default");
+                    emiObject.put("emiInterval", "Select Duration");
+                    emiObject.put("bankName", "Select Bank");
+                    PayU.availableEmi.put(0, emiObject);
+                }
+
+
+                // cash card available, enforce pay method
+
+                if (ibiboCodes.has("cashcard")) {
+                    Iterator<String> cashCardIterator = ibiboCodes.getJSONObject("cashcard").keys();
+                    // for default options
+
+                    /*JSONObject cashObject = new JSONObject();
+                    cashObject.put("code", "null");
+                    cashObject.put("name", "");
+                    PayU.availableCashCards.put(cashObject);*/
+
+                    if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("cashcard")) {
+                        while (cashCardIterator.hasNext()) {
+                            String cashCardCode = cashCardIterator.next();
+                            if (!dropCategoriesSet.contains(cashCardCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("code", cashCardCode);
+                                jsonObject.put("name", ibiboCodes.getJSONObject("cashcard").getJSONObject(cashCardCode).getString("title"));
+                                PayU.availableCashCards.put(jsonObject);
+                            }
+                        }
+                        cashCardPresent = true;
+                    } else {
+                        while (cashCardIterator.hasNext()) {
+                            String cashCardCode = cashCardIterator.next();
+                            JSONObject jsonObject = new JSONObject();
+                            if (enforcePayMethodsSet.contains(cashCardCode) && !dropCategoriesSet.contains(cashCardCode)) {
+                                jsonObject.put("code", cashCardCode);
+                                jsonObject.put("name", ibiboCodes.getJSONObject("cashcard").getJSONObject(cashCardCode).getString("title"));
+                                PayU.availableCashCards.put(jsonObject);
+                                cashCardPresent = true;
+                            }
+                        }
+                    }
+
+                    // for default select option
+
+                    PayU.availableCashCards = jsonArraySort(PayU.availableCashCards, "name");
+                    if(Constants.SET_DEFAULT_CASH_CARD){
+                        JSONObject cashObject = new JSONObject();
+                        cashObject.put("code", "default");
+                        cashObject.put("name", "Select your cash card");
+                        PayU.availableCashCards.put(0, cashObject);
+                    }
+                }
+
+                if (ibiboCodes.has("creditcard")) {
+                    //   available credit cardsy
+                    Iterator<String> creditCardIterator = ibiboCodes.getJSONObject("creditcard").keys();
+                    if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("creditcard")) {
+                        while (creditCardIterator.hasNext()) {
+                            String creditCardCode = creditCardIterator.next();
+                            if (!dropCategoriesSet.contains(creditCardCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("code", creditCardCode);
+                                jsonObject.put("name", ibiboCodes.getJSONObject("creditcard").getJSONObject(creditCardCode).getString("title"));
+                                PayU.availableCreditCards.put(jsonObject);
+                            }
+                        }
+                        ccPresent = true;
+                    } else {
+                        while (creditCardIterator.hasNext()) {
+                            String creditCardCode = creditCardIterator.next();
+                            if (enforcePayMethodsSet.contains(creditCardCode) && !dropCategoriesSet.contains(creditCardCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("code", creditCardCode);
+                                jsonObject.put("name", ibiboCodes.getJSONObject("creditcard").getJSONObject(creditCardCode).getString("title"));
+                                PayU.availableCreditCards.put(jsonObject);
+                                ccPresent = true;
+                            }
+                        }
+                    }
+//                        PayU.availableCreditCards = creditCardsAvailable;
+
+                }
+
+                if (ibiboCodes.has("debitcard")) {
+                    // available debit cards
+
+                    Iterator<String> debitCardIterator = ibiboCodes.getJSONObject("debitcard").keys();
+                    if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("debitcard")) {
+                        while (debitCardIterator.hasNext()) {
+                            String debitCardCode = debitCardIterator.next();
+                            if (!dropCategoriesSet.contains(debitCardCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("code", debitCardCode);
+                                jsonObject.put("name", ibiboCodes.getJSONObject("debitcard").getJSONObject(debitCardCode).getString("title"));
+                                PayU.availableDebitCards.put(jsonObject);
+                            }
+                        }
+                        dcPresent = true;
+                    } else {
+                        while (debitCardIterator.hasNext()) {
+                            String debitCardCode = debitCardIterator.next();
+                            if (enforcePayMethodsSet.contains(debitCardCode) && !dropCategoriesSet.contains(debitCardCode)) {
+                                JSONObject jsonObject = new JSONObject();
+                                jsonObject.put("code", debitCardCode);
+                                jsonObject.put("name", ibiboCodes.getJSONObject("debitcard").getJSONObject(debitCardCode).getString("title"));
+                                PayU.availableDebitCards.put(jsonObject);
+                                dcPresent = true;
+                            }
+                        }
+                    }
+//                        PayU.availableDebitCards = debitCardsAvailable;
+
+                }
+
+                // lets find the available modes
+                if(PayU.userCredentials != null){
+                    PayU.availableModes.put("STORED_CARDS");
+                }
+                if (ccPresent || dcPresent)
+                    PayU.availableModes.put("CC");
+                //if (dcPresent)
+                //modesAvailable.put("DC");
+                if (nbPresent)
+                    PayU.availableModes.put("NB");
+                if (emiPresent)
+                    PayU.availableModes.put("EMI");
+                if (cashCardPresent)
+                    PayU.availableModes.put("CASH");
+
+                Iterator<String> modeKeysIterator = ibiboCodes.keys();
+                if ((PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("paisawallet")) && (PayU.dropCategory == null) || !dropCategoriesSet.contains("paisawallet")) {
+                    while (modeKeysIterator.hasNext()) {
+                        String option = modeKeysIterator.next();
+                        if (option.contentEquals("paisawallet"))
+                            PayU.availableModes.put("PAYU_MONEY");
+                    }
+                }
+
+                // lets store the stored cards.
+
+                if(userCards.length() > 0){
+                    storeUserCards(userCards);
+                }
+                // set the time data fetched at
+                PayU.dataFetchedAt = System.currentTimeMillis();
+
+
+                return null;
+
+
+            } catch (JSONException e) {
+               localException = e.getMessage();
+//                e.printStackTrace();
+            }
+
+
+        } else if(response.length() > 0 && lists[0].get(1).getValue().contentEquals(Constants.GET_VAS)){
+            // here we find the issuing , net banking downtime.
+            PayU.netBankingStatus = new HashMap<String, Integer>();
+            if(response.has("netBankingStatus")){
+                try {
+                    JSONObject netBanking = response.getJSONObject("netBankingStatus");
+                    Iterator<String> keysIterator = netBanking.keys();
+
+                    while (keysIterator.hasNext()) {
+                        String bankCode = (String) keysIterator.next();
+                        PayU.netBankingStatus.put(bankCode, netBanking.getJSONObject(bankCode).getInt("up_status"));
+                    }
+                } catch (JSONException e) {
+                    localException = e.getMessage();
+//                    e.printStackTrace();
+                }
+            }
+            if(response.has("issuingBankDownBins")){
+                PayU.issuingBankDownBin = new JSONObject();
+                try {
+                    JSONArray issuingBank = response.getJSONArray("issuingBankDownBins");
+                    for(int i = 0,length = issuingBank.length(); i < length ; i++){
+
+                        if(issuingBank.getJSONObject(i).getInt("status") == 0){
+                            for(int j = 0, binArrayLength = (issuingBank.getJSONObject(i).getJSONArray("bins_arr").length()); j < binArrayLength; j++){
+                                PayU.issuingBankDownBin.put(issuingBank.getJSONObject(i).getJSONArray("bins_arr").getString(j), issuingBank.getJSONObject(i).getString("title"));
+                            }
+                        }
+                    }
+                } catch (JSONException e) {
+                    localException = e.getMessage();
+                }
+                if(response.has("sbiMaesBins")){
+
+                    try {
+                        JSONArray sbiMaesBins = response.getJSONArray("sbiMaesBins");
+                        for(int i = 0, length = sbiMaesBins.length(); i < length; i++){
+                            if(!Cards.SBI_MAES_BIN.contains(sbiMaesBins.getString(i))){
+                                Cards.SBI_MAES_BIN.add(sbiMaesBins.getString(i));
+                            }
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+
+        } else if(response.length() > 0 && lists[0].get(1).getValue().contentEquals(Constants.GET_USER_CARDS)){
+            storeUserCards(response);
+        }else if(response.length() > 0 && lists[0].get(1).getValue().contentEquals(Constants.OFFER_STATUS)){
+            if(response.has("offer_key")){
+                PayU.offerStatus = new JSONArray();
+                PayU.offerStatus.put(response);
+            }
+        }
+
+        if(response.has("msg")){
+            try {
+                return response.getString("msg");
+            } catch (JSONException e) {
+                localException = e.getMessage();
+//                e.printStackTrace();
+            }
+        }
+        // not null & no msg then just a json array. lets notify the user .
+
+        return  localException.length() > 1 ? localException :"Data fetched successfully.";
+
+    }
+
+    private void storeUserCards(JSONObject userCards) {
+
+        PayU.storedCards = new JSONArray();
+
+        if (userCards.has("user_cards")) {
+            try {
+                JSONObject user_cards = userCards.getJSONObject("user_cards");
+                Iterator<String> keysIterator = user_cards.keys();
+
+                while (keysIterator.hasNext()) {
+                    String cardToken = (String) keysIterator.next();
+                    PayU.storedCards.put(user_cards.getJSONObject(cardToken));
+                }
+            } catch (JSONException e) {
+               localException =  e.getMessage();
+//                e.printStackTrace();
+            }
+        }
     }
 
     @Override
-    protected void onPostExecute(JSONArray result) {
-        mResponseListener.onGetAvailableBanks(result);
+    protected void onPostExecute(String responseMessage) {
+        mResponseListener.onGetResponse(responseMessage);
     }
 
     public JSONArray jsonArraySort(JSONArray jsonArray, final String key) throws JSONException {
@@ -365,7 +466,7 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, JSON
                     valA = (String) a.get(key);
                     valB = (String) b.get(key);
                 } catch (JSONException e) {
-
+                    localException = e.getMessage();
                 }
 
                 return valA.compareTo(valB);

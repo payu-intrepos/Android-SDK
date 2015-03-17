@@ -98,10 +98,17 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
             List<NameValuePair> postParams = null;
 
             HashMap varList = new HashMap();
-            varList.put(Constants.VAR1, Constants.DEFAULT);
+
+            if(getActivity().getIntent().getExtras().getString("user_credentials") == null){// ok we have a user credentials.
+                varList.put(Constants.VAR1, Constants.DEFAULT);
+            }else{
+                varList.put(Constants.VAR1, getActivity().getIntent().getExtras().getString("user_credentials"));
+//                varList.put(Constants.VAR1, Constants.DEFAULT);
+            }
 
             try {
-                postParams = PayU.getInstance(getActivity()).getParams(Constants.GET_IBIBO_CODES, varList);
+//                postParams = PayU.getInstance(getActivity()).getParams(Constants.GET_IBIBO_CODES, varList);
+                postParams = PayU.getInstance(getActivity()).getParams(Constants.PAYMENT_RELATED_DETAILS, varList);
                 GetResponseTask getResponse = new GetResponseTask(PaymentOptionsFragment.this);
                 getResponse.execute(postParams);
             } catch (NoSuchAlgorithmException e) {
@@ -120,9 +127,10 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
     }
 
     @Override
-    public void onGetAvailableBanks(JSONArray availableModes) {
+    public void onGetResponse(String responseMessage) {
         // list of available payment modes for the merchant
 
+        JSONArray availableModes = PayU.availableModes;
 
         if (mAvailableOptions != null) {
             // check all the mAvailableOptions present in availableMode
@@ -159,10 +167,10 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
             setAvailableModes(availableModes, null);
     }
 
-    @Override
+    /*@Override
     public void onGetStoreCardDetails(JSONArray response) {
 
-    }
+    }*/
 
     private void setAvailableModes(JSONArray availableModes, PayU.PaymentMode[] availableOptions) {
         PaymentModeAdapter adapter;

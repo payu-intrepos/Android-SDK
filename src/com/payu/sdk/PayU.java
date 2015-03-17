@@ -1,9 +1,12 @@
 package com.payu.sdk;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.payu.sdk.exceptions.HashException;
@@ -12,6 +15,7 @@ import com.payu.sdk.exceptions.MissingParameterException;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -35,8 +39,8 @@ public class PayU {
 
     private static final String TAG = "PayU";
     private static PayU INSTANCE;
-    private final Activity mActivity;
-    private final String mSalt;
+    private Activity mActivity;
+    private String mSalt;
 
 
     public static final String AMOUNT = "amount";
@@ -64,6 +68,9 @@ public class PayU {
     public static final String SDK = "1";
 //    public static final String DISABLE_PAYMENT_PROCESS_BACK_BUTTON = "disable_web_view_back";
     public static final String DISABLE_CUSTOM_BROWSER = "showCustom";
+    public static final String INSTRUMENT_TYPE = "instrument_type";
+    public static final String INSTRUMENT_ID = "instrument_id";
+
 
     public static final String VAR1 = "var1";
     public static final String VAR2 = "var2";
@@ -75,6 +82,17 @@ public class PayU {
     public static final String VAR8 = "var8";
     public static final String VAR9 = "var9";
 
+    public static final String VISA = "VISA";
+    public static final String LASER = "LASER";
+    public static final String DISCOVER = "DISCOVER";
+    public static final String MAES = "MAES";
+    public static final String MAST = "MAST";
+    public static final String AMEX = "AMEX";
+    public static final String DINR = "DINR";
+    public static final String JCB = "JCB";
+    public static final String SMAE = "SMAE";
+
+
     public static JSONArray availableBanks;
     public static JSONArray availableEmi;
     public static JSONArray availableCashCards;
@@ -82,11 +100,29 @@ public class PayU {
     public static JSONArray availableDebitCards;
     public static JSONArray availableCreditCards;
     public static JSONArray offerStatus;
+    public static JSONArray storedCards;
+
+    public static HashMap<String, Integer> netBankingStatus ;
+//    public static Set<Integer> issuingBankDownBin;
+
+    public static JSONObject issuingBankDownBin;
 
     public static String dropCategory;
     public static String enforcePayMethod;
+    public static String userCredentials;
+
+    public static String paymentHash;
+    public static String deleteCardHash;
+    public static String getUserCardHash;
+    public static String editUserCardHash;
+    public static String saveUserCardHash;
+    public static String merchantCodesHash;
+    public static String vasHash;
+    public static String ibiboCodeHash;
 
     public static PaymentMode[] paymentOptions = null;
+
+    public static ProgressDialog payUProgressDialog;
 
 
     public static long dataFetchedAt;
@@ -125,15 +161,23 @@ public class PayU {
         if (INSTANCE == null) {
             try {
                 Bundle bundle = activity.getPackageManager().getApplicationInfo(activity.getPackageName(), PackageManager.GET_META_DATA).metaData;
-                INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), bundle.getString("payu_merchant_salt"));
+                if(Constants.SDK_HASH_GENERATION){ // not recommended though.
+                    INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), bundle.getString("payu_merchant_salt"));
+                }else{ // highly recommend
+                    INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), null);
+                }
+
             } catch (PackageManager.NameNotFoundException e) {
                 Log.e(TAG, "Failed to load meta-data, NameNotFound: " + e.getMessage());
             } catch (NullPointerException e) {
                 Log.e(TAG, "Failed to load meta-data, NullPointer: " + e.getMessage());
             }
+
         }
         return INSTANCE;
     }
+
+
 
     public void startPaymentProcess(double amount, HashMap<String, String> userParams) {
         startPaymentProcess(amount, userParams, null);
@@ -153,6 +197,9 @@ public class PayU {
         if (userParams.containsKey(ENFORCE_PAYMETHOD)) {
             enforcePayMethod = userParams.get(ENFORCE_PAYMETHOD);
         }
+        if (userParams.containsKey(USER_CREDENTIALS)){
+            userCredentials = userParams.get(USER_CREDENTIALS);
+        }
         if (modes != null) {
             int[] m = new int[modes.length];
             int i = 0;
@@ -168,30 +215,27 @@ public class PayU {
     }
 
     public String createPayment(Payment payment, Params params) throws MissingParameterException, HashException {
+
         params.put("pg", payment.getMode().toString());
         params.put(UDF, SDK);
+        params.put(INSTRUMENT_ID, Settings.Secure.getString(mActivity.getContentResolver(), Settings.Secure.ANDROID_ID));
+        params.put(INSTRUMENT_TYPE, "Manufacturer: " + Build.MANUFACTURER + " Model: " + Build.MODEL + "  Product: " + Build.PRODUCT);
+
         switch (payment.getMode()) {
             case CC:
                 params.put(BANKCODE, "CC");
                 validateParams(REQUIRED_CC_PARAMS, params);
                 if (params.get("store_card_token").length() > 1)
                     break;
+                if(params.get("ccvv").length() < 3){
+                    params.put(CVV, "123");
+                    params.put(EXPIRY_MONTH, "12");
+                    params.put(EXPIRY_YEAR, "2090");
+                    break;
+                }
+
                 validateParams(REQUIRED_CARD_PARAMS, params);
 
-                break;
-            case DC:
-                if (params.get("store_card_token").length() > 1)
-                    break;
-                else if (params.get(CVV).length() < 3) {
-                    params.put(BANKCODE, "SMAE");
-                    params.remove(CVV);
-                    params.remove(EXPIRY_MONTH);
-                    params.remove(EXPIRY_YEAR);
-                    break;
-                } else
-                    params.put(BANKCODE, "VISA");
-                validateParams(REQUIRED_CC_PARAMS, params);
-                validateParams(REQUIRED_CARD_PARAMS, params);
                 break;
             case NB:
                 validateParams(REQUIRED_NB_PARAMS, params);
@@ -208,28 +252,39 @@ public class PayU {
 //        validateParams(REQUIRED_PAYMENT_PARAMS, params);
         // create the payment hash
 
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA-512");
-//            String postData = mMerchantKey + "|" + params.get(TXNID) + "|" + params.get(AMOUNT) + "|" + params.get(PRODUCT_INFO) + "|" + params.get(FIRSTNAME) + "|" + params.get(EMAIL) + "|";
-            String postData = mMerchantKey + "|" + params.get("txnid") + "|" + params.get("amount") + "|" + params.get("productinfo") + "|" + params.get("firstname") + "|" + params.get("email") + "|";
+        String postData;
+        StringBuffer hexString = new StringBuffer();
 
-            for (int i = 1; i <= 10; i++) {
-                postData += params.get("udf" + String.valueOf(i)) + "|";
-            }
-            postData += mSalt;
-            messageDigest.update(postData.getBytes());
-            byte[] mdbytes = messageDigest.digest();
-            StringBuffer hexString = new StringBuffer();
-            for (byte hashByte : mdbytes) {
+        try {
+
+            if(Constants.SDK_HASH_GENERATION){
+                postData = mMerchantKey + "|" + params.get("txnid") + "|" + params.get("amount") + "|" + params.get("productinfo") + "|" + params.get("firstname") + "|" + params.get("email") + "|";
+                MessageDigest messageDigest = MessageDigest.getInstance("SHA-512");
+
+                for (int i = 1; i <= 10; i++) {
+                    postData += params.get("udf" + String.valueOf(i)) + "|";
+                }
+                postData += mSalt;
+                messageDigest.update(postData.getBytes());
+                byte[] mdbytes = messageDigest.digest();
+
+                for (byte hashByte : mdbytes) {
 //                hexString.append(Integer.toHexString(0xFF & hashByte));
-                hexString.append(Integer.toString((hashByte & 0xff) + 0x100, 16).substring(1));
+                    hexString.append(Integer.toString((hashByte & 0xff) + 0x100, 16).substring(1));
+                }
             }
-//            postData = MERCHANT_KEY + "=" + mMerchantKey + "&";
+
             postData = "";
+
             for (String key : params.keySet()) {
-                postData += key + "=" + URLEncoder.encode(params.get(key), "UTF-8") + "&";
+                if(key.contentEquals(PayU.USER_CREDENTIALS))// usercredential should have : (ex merchant:userId)
+                    postData += key + "=" + params.get(key) + "&";
+                else
+                    postData += key + "=" + URLEncoder.encode(params.get(key), "UTF-8") + "&";
             }
-            postData += Constants.HASH + "=" + hexString.toString();
+
+
+            postData += Constants.HASH + "=" + (Constants.SDK_HASH_GENERATION ? hexString.toString() : paymentHash);
             return postData;
         } catch (NoSuchAlgorithmException e) {
             throw new HashException();
@@ -246,23 +301,29 @@ public class PayU {
                 throw new MissingParameterException("Parameter " + param + " is missing");
             }
         }
+        if(!Constants.SDK_HASH_GENERATION && paymentHash == null ){//lets validate hash.
+            throw new MissingParameterException("Parameter Hash is missing");
+        }
     }
 
     //    public List<NameValuePair> getParams(String command, String var) throws NoSuchAlgorithmException, UnsupportedEncodingException {
     public List<NameValuePair> getParams(String mCommand, HashMap<String, String> paramsList) throws NoSuchAlgorithmException {
-        MessageDigest messageDigest = MessageDigest.getInstance("SHA-512");
 
-        String postData = mMerchantKey + "|" + mCommand + "|" + paramsList.get("var1") + "|" + mSalt;
-
-        messageDigest.update(postData.getBytes());
-        byte[] mdBytes = messageDigest.digest();
         StringBuilder hexString = new StringBuilder();
+        if(Constants.SDK_HASH_GENERATION){
+            MessageDigest messageDigest = MessageDigest.getInstance("SHA-512");
 
-        for (byte hashByte : mdBytes) {
-            hexString.append(Integer.toString((hashByte & 0xff) + 0x100, 16).substring(1));
+            String postData = mMerchantKey + "|" + mCommand + "|" + paramsList.get("var1") + "|" + mSalt;
+
+            messageDigest.update(postData.getBytes());
+            byte[] mdBytes = messageDigest.digest();
+
+
+            for (byte hashByte : mdBytes) {
+                hexString.append(Integer.toString((hashByte & 0xff) + 0x100, 16).substring(1));
+            }
         }
 
-//        postData = "key=" + mMerchantKey + "&command=" + command + "&var1=" + var  +"&hash=" + hexString.toString() ;
 
         List<NameValuePair> params = new ArrayList<NameValuePair>(4);
         params.add(new BasicNameValuePair("key", mMerchantKey));
@@ -270,39 +331,27 @@ public class PayU {
         for (int i = 1; i <= paramsList.size(); i++) {
             params.add(new BasicNameValuePair("var" + i, String.valueOf(paramsList.get("var" + i))));
         }
-        params.add(new BasicNameValuePair("hash", hexString.toString()));
+
+        if(Constants.SDK_HASH_GENERATION){
+            params.add(new BasicNameValuePair("hash", hexString.toString()));
+        }else if(mCommand.contentEquals(Constants.GET_IBIBO_CODES)){
+            params.add(new BasicNameValuePair("hash", merchantCodesHash));
+        }else if(mCommand.contentEquals(Constants.SAVE_USER_CARD)){
+            params.add(new BasicNameValuePair("hash", saveUserCardHash));
+        }else if(mCommand.contentEquals(Constants.EDIT_USER_CARD)){
+            params.add(new BasicNameValuePair("hash", editUserCardHash));
+        }else if(mCommand.contentEquals(Constants.DELETE_USER_CARD)){
+            params.add(new BasicNameValuePair("hash", deleteCardHash));
+        }else if(mCommand.contentEquals(Constants.GET_USER_CARDS)) {
+            params.add(new BasicNameValuePair("hash", getUserCardHash));
+        }else if(mCommand.contentEquals(Constants.PAYMENT_RELATED_DETAILS)){
+            params.add(new BasicNameValuePair("hash", ibiboCodeHash));
+        }else if(mCommand.contentEquals(Constants.GET_VAS)){
+            params.add(new BasicNameValuePair("hash", vasHash));
+        }
+
         //sdk user define fields.
         params.add(new BasicNameValuePair(UDF, SDK));
         return params;
     }
-
-    /*public static void checkOfferStatus(Activity activity, String cardNumber, String offerKey, String category ){
-
-        List<NameValuePair> postParams = null;
-
-        HashMap varList = new HashMap();
-
-        // offer key
-        varList.put("var1", offerKey);
-        // empty
-        varList.put("var2", "");
-        // category
-        varList.put("var3", category);
-        // bank code
-        varList.put("var4", "");
-        // empty
-        varList.put("var5", cardNumber);
-
-        try {
-            postParams = PayU.getInstance(activity).getParams("check_offer_status", varList);
-            StoreCardTask getStoredCards = new StoreCardTask((PaymentListener) activity);
-            getStoredCards.execute(postParams);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-    }*/
-
-
 }
