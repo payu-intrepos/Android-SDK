@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Message;
@@ -122,21 +123,37 @@ public class ProcessPaymentActivity extends FragmentActivity {
             findViewById(R.id.parent).bringToFront();
             getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.fade_in,R.anim.face_out).add(R.id.parent, bank).commit();
 
-            webView.setWebChromeClient(new PayUWebChromeClient(bank) {
-                public void onProgressChanged(WebView view, int newProgress) {
-                    super.onProgressChanged(view, newProgress);
+            if(getIntent().getExtras().getString("postData").toLowerCase().contains("pg=nb")){ // in case of nb just disable loader as soon as page finishes
+                webView.setWebChromeClient(new WebChromeClient() {
+                    @Override
+                    public boolean onCreateWindow (WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                        return false;
+                    }
 
-                     progressBarVisibilityPayuChrome(View.VISIBLE);
+                    @Override
+                    public void onProgressChanged(WebView view, int newProgress) {
+                        progressBarVisibility(View.VISIBLE);
+                        if (newProgress == 100) {
+                            progressBarVisibility(View.GONE);
+                        }
+                    }
+                });
+            }else{// this is card. just to avoid the flickering. 
+                webView.setWebChromeClient(new PayUWebChromeClient(bank) {
+                    public void onProgressChanged(WebView view, int newProgress) {
+                        super.onProgressChanged(view, newProgress);
 
-                    if (newProgress == 100) {
-                       checkUnavailable++;
+                        progressBarVisibilityPayuChrome(View.VISIBLE);
+
+                        if (newProgress == 100) {
+                            checkUnavailable++;
+
+                        }
 
                     }
 
-                }
-
-            });
-
+                });
+            }
 
         } catch (ClassNotFoundException e) {
             webView.getSettings().setSupportMultipleWindows(true);
@@ -190,15 +207,6 @@ public class ProcessPaymentActivity extends FragmentActivity {
                 @Override
                 public void onProgressChanged(WebView view, int newProgress) {
                     progressBarVisibility(View.VISIBLE);
-
-                    int countchild=((FrameLayout)findViewById(R.id.parent)).getChildCount();
-                    if(countchild==1)
-                    {
-                        if (((FrameLayout) findViewById(R.id.parent)).getVisibility()==View.VISIBLE && ((FrameLayout) findViewById(R.id.parent)).getChildAt(countchild-1).getVisibility() == View.VISIBLE) {
-                            Log.d("pakage", "visible" + ((FrameLayout) findViewById(R.id.parent)).getChildAt(countchild-1).getVisibility() + "");
-                            progressBarVisibility(View.GONE);
-                        }
-                    }
                     if (newProgress == 100) {
                         progressBarVisibility(View.GONE);
                     }
