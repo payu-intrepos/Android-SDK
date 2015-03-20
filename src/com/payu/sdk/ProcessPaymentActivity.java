@@ -123,7 +123,7 @@ public class ProcessPaymentActivity extends FragmentActivity {
             findViewById(R.id.parent).bringToFront();
             getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.fade_in,R.anim.face_out).add(R.id.parent, bank).commit();
 
-            if(getIntent().getExtras().getString("postData").toLowerCase().contains("pg=nb")){ // in case of nb just disable loader as soon as page finishes
+            if(getIntent().getExtras().getString("postData").toLowerCase().contains("pg=nb") || getIntent().getExtras().getString("postData").toLowerCase().contains("pg=cash")){ // in case of nb just disable loader as soon as page finishes
                 webView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public boolean onCreateWindow (WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
@@ -132,13 +132,13 @@ public class ProcessPaymentActivity extends FragmentActivity {
 
                     @Override
                     public void onProgressChanged(WebView view, int newProgress) {
-                        progressBarVisibility(View.VISIBLE);
+                        progressBarVisibilityPayuChrome(View.VISIBLE);
                         if (newProgress == 100) {
                             progressBarVisibility(View.GONE);
                         }
                     }
                 });
-            }else{// this is card. just to avoid the flickering. 
+            }else{// this is card. just to avoid the flickering.
                 webView.setWebChromeClient(new PayUWebChromeClient(bank) {
                     public void onProgressChanged(WebView view, int newProgress) {
                         super.onProgressChanged(view, newProgress);
