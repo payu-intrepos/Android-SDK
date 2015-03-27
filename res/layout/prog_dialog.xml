@@ -43,8 +43,6 @@
             android:text="@string/please_wait"
             android:id="@+id/please_wait">
         </TextView>
-
-
     </LinearLayout>
 
 </RelativeLayout>

@@ -74,15 +74,14 @@ public class ProcessPaymentActivity extends FragmentActivity {
 
                 @Override
                 public void onHelpUnavailable() {
-                    if(checkUnavailable>1)
-                        progressBarVisibility(View.GONE);
+
                     findViewById(R.id.parent).setVisibility(View.GONE);
                     findViewById(R.id.trans_overlay).setVisibility(View.GONE);
                 }
 
                 @Override
                 public void onBankError() {
-                   progressBarVisibility(View.GONE);
+                    progressBarVisibility(View.GONE);
                     findViewById(R.id.parent).setVisibility(View.GONE);
                     findViewById(R.id.trans_overlay).setVisibility(View.GONE);
                 }
@@ -90,15 +89,19 @@ public class ProcessPaymentActivity extends FragmentActivity {
                 @Override
                 public void onHelpAvailable() {
                     findViewById(R.id.parent).setVisibility(View.VISIBLE);
-                    int countchild=((FrameLayout)findViewById(R.id.parent)).getChildCount();
-                    if(countchild==1)
-                    {
-                        if (((FrameLayout) findViewById(R.id.parent)).getVisibility()==View.VISIBLE && ((FrameLayout) findViewById(R.id.parent)).getChildAt(countchild-1).getVisibility() == View.VISIBLE) {
-                            progressBarVisibility(View.GONE);
-                        }
-                    }
+                }
+
+                @Override
+                public void showProgress() {
+                    progressBarVisibility(View.VISIBLE);
+                }
+
+                @Override
+                public void hideProgress() {
+                    progressBarVisibility(View.GONE);
 
                 }
+
             };
             Bundle args = new Bundle();
             args.putInt("webView", R.id.webview);
@@ -123,37 +126,12 @@ public class ProcessPaymentActivity extends FragmentActivity {
             findViewById(R.id.parent).bringToFront();
             getSupportFragmentManager().beginTransaction().setCustomAnimations(R.anim.fade_in,R.anim.face_out).add(R.id.parent, bank).commit();
 
-            if(getIntent().getExtras().getString("postData").toLowerCase().contains("pg=nb") || getIntent().getExtras().getString("postData").toLowerCase().contains("pg=cash")){ // in case of nb just disable loader as soon as page finishes
-                webView.setWebChromeClient(new WebChromeClient() {
-                    @Override
-                    public boolean onCreateWindow (WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-                        return false;
-                    }
-
-                    @Override
-                    public void onProgressChanged(WebView view, int newProgress) {
-                        progressBarVisibilityPayuChrome(View.VISIBLE);
-                        if (newProgress == 100) {
-                            progressBarVisibility(View.GONE);
-                        }
-                    }
-                });
-            }else{// this is card. just to avoid the flickering.
-                webView.setWebChromeClient(new PayUWebChromeClient(bank) {
-                    public void onProgressChanged(WebView view, int newProgress) {
-                        super.onProgressChanged(view, newProgress);
-
-                        progressBarVisibilityPayuChrome(View.VISIBLE);
-
-                        if (newProgress == 100) {
-                            checkUnavailable++;
-
-                        }
-
-                    }
-
-                });
-            }
+            webView.setWebChromeClient(new PayUWebChromeClient(bank) {
+                public void onProgressChanged(WebView view, int newProgress) {
+                    super.onProgressChanged(view, newProgress);
+                    progressBarVisibilityPayuChrome(View.VISIBLE);
+                }
+            });
 
         } catch (ClassNotFoundException e) {
             webView.getSettings().setSupportMultipleWindows(true);
@@ -199,11 +177,6 @@ public class ProcessPaymentActivity extends FragmentActivity {
             }, "PayU");
 
             webView.setWebChromeClient(new WebChromeClient() {
-                @Override
-                public boolean onCreateWindow (WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-                    return false;
-                }
-
                 @Override
                 public void onProgressChanged(WebView view, int newProgress) {
                     progressBarVisibility(View.VISIBLE);
@@ -300,6 +273,4 @@ public class ProcessPaymentActivity extends FragmentActivity {
         progDialog.setCanceledOnTouchOutside(false);
         return progDialog;
     }
-
-
 }

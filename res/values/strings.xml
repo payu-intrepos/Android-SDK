@@ -19,7 +19,7 @@
     <string name="select_save_card">Select a saved card or use a new one</string>
     <string name="use_new_card">New card</string>
     <string name="no_card_found">No card found!</string>
-    <string name="netbankingNote">Note: In the next step you will be redirect to your bank website to verify your account</string>
+    <string name="netbankingNote">Note: In the next step you will be redirected to your bank\'s website to verify yourself.</string>
     <string name="cashCardNote">Note: In the next step you will be redirected to your bank\'s website to verify yourself.</string>
     <string name="click_here">Click here</string>
     <string name="if_cvv_and_expiry_on_card"> &#160;if you have CVV and Expiry on your card</string>

@@ -89,7 +89,7 @@ public class CashCardFragment extends ProcessPaymentFragment implements PaymentL
             setupAdapter();
         }
 
-        getActivity().findViewById(R.id.makePayment).setOnClickListener(new View.OnClickListener() {
+        getActivity().findViewById(R.id.cashCardMakePayment).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Params requiredParams = new Params();
@@ -133,10 +133,31 @@ public class CashCardFragment extends ProcessPaymentFragment implements PaymentL
             public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
                 try {
                     bankCode = ((JSONObject) adapterView.getAdapter().getItem(i)).getString("code");
+
                     if (bankCode.contentEquals("default")) {
-                        getActivity().findViewById(R.id.makePayment).setEnabled(false);
+                        getActivity().findViewById(R.id.cashCardMakePayment).setEnabled(false);
+                        if(getActivity().getSupportFragmentManager().findFragmentById(R.id.cardFragmentPlaceHolder) != null)
+                            getActivity().getSupportFragmentManager().beginTransaction().remove(getActivity().getSupportFragmentManager().findFragmentById(R.id.cardFragmentPlaceHolder)).commit();
+                        getActivity().findViewById(R.id.cashCardMakePayment).setVisibility(View.VISIBLE);
+
+                    } else if(bankCode.contentEquals("CPMC")){
+                        // oh, screwed, its citi rewards,
+                        // lets attach the cards fragment, which will take care of validation.
+                        CardsFragment cardFragment = new CardsFragment();
+                        Bundle bundle = new Bundle();
+                        bundle.putString("rewardPoint", bankCode);
+                        cardFragment.setArguments(bundle);
+
+                        // Add the fragment to the 'fragment_container' FrameLayout
+                        getActivity().getSupportFragmentManager().beginTransaction().add(R.id.cardFragmentPlaceHolder, cardFragment).commit();
+                        getActivity().findViewById(R.id.cashCardMakePayment).setVisibility(View.GONE);
+
                     } else {
-                        getActivity().findViewById(R.id.makePayment).setEnabled(true);
+                        if(getActivity().getSupportFragmentManager().findFragmentById(R.id.cardFragmentPlaceHolder) != null)
+                            getActivity().getSupportFragmentManager().beginTransaction().remove(getActivity().getSupportFragmentManager().findFragmentById(R.id.cardFragmentPlaceHolder)).commit();
+
+                        getActivity().findViewById(R.id.cashCardMakePayment).setVisibility(View.VISIBLE);
+                        getActivity().findViewById(R.id.cashCardMakePayment).setEnabled(true);
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();

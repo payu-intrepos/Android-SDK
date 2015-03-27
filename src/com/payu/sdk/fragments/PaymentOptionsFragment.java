@@ -103,7 +103,6 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
                 varList.put(Constants.VAR1, Constants.DEFAULT);
             }else{
                 varList.put(Constants.VAR1, getActivity().getIntent().getExtras().getString("user_credentials"));
-//                varList.put(Constants.VAR1, Constants.DEFAULT);
             }
 
             try {

@@ -93,6 +93,7 @@ public class Cards {
     public static DatePickerDialog customDatePicker(Activity activity, DatePickerDialog.OnDateSetListener mDateSetListener, int mYear, int mMonth, int mDay) {
         DatePickerDialog dpd = new DatePickerDialog(activity, mDateSetListener, mYear, mMonth, mDay);
 //        dpd.getDatePicker().setMinDate(new Date().getTime() - 1000);
+        dpd.getDatePicker().setSpinnersShown(true);
         if (Build.VERSION.SDK_INT >= 11) {
             dpd.getDatePicker().setMinDate(System.currentTimeMillis() - 1000);
         }

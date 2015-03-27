@@ -121,9 +121,6 @@ public class StoredCardFragment extends ProcessPaymentFragment implements Paymen
 
             requiredParams.put("store_card_token", selectedCard.getString("card_token"));
 
-//            requiredParams.put(PayU.FIRSTNAME, selectedCard.getString("name_on_card"));
-//            requiredParams.put(PayU.FIRSTNAME, "");
-
             startPaymentProcessActivity(PayU.PaymentMode.valueOf(selectedCard.getString("card_mode")), requiredParams);
 
 
@@ -252,10 +249,6 @@ public class StoredCardFragment extends ProcessPaymentFragment implements Paymen
                 builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-
-                        // hide the keyboard.
-                        /*getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-*/
                         makePayment(selectedCard, input.getText().toString());
                     }
                 });

@@ -179,14 +179,16 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
                 if (getArguments().getString(PayU.STORE_CARD) != null) { // this comes from the stored card fragment.
                     requiredParams.put("card_name", cardName);
                     requiredParams.put(PayU.STORE_CARD, "1");
+                    startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
+                }else if(getArguments().getString("rewards") != null ) { // this comes from cash card fragment..citi reward
+                    requiredParams.put(PayU.BANKCODE, getArguments().getString("rewards"));
+                    startPaymentProcessActivity(PayU.PaymentMode.CASH, requiredParams);
+                }else {
+                    startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
                 }
-
-                startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
             }
         });
-
         return cardDetails;
-
     }
 
     @Override
