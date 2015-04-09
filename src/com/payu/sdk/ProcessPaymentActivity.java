@@ -202,7 +202,7 @@ public class ProcessPaymentActivity extends FragmentActivity {
         }
         if(!disableBack) {
             Intent intent = new Intent();
-            intent.putExtra("result", "");
+            intent.putExtra("result", getString(R.string.cancel_due_to_back_pressed));
             setResult(RESULT_CANCELED, intent);
             super.onBackPressed();
         }
