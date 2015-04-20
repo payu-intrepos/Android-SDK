@@ -34,15 +34,11 @@ import java.util.Map;
 public class PayU {
 
     public static final int RESULT = 100;
-
     private static String mMerchantKey;
-
     private static final String TAG = "PayU";
     private static PayU INSTANCE;
     private Activity mActivity;
     private String mSalt;
-
-
     public static final String AMOUNT = "amount";
     public static final String TXNID = "txnid";
     public static final String PRODUCT_INFO = "productinfo";

@@ -3,6 +3,7 @@ package com.payu.sdk.fragments;
 
 import android.app.Activity;
 import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -17,6 +18,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.EditText;
@@ -33,6 +35,7 @@ import com.payu.sdk.R;
 import org.apache.http.NameValuePair;
 import org.json.JSONException;
 
+import java.lang.reflect.Field;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -40,15 +43,10 @@ import java.util.List;
 
 
 /**
- * A simple {@link Fragment} subclass.
+ * A simple {@link android.support.v4.app.Fragment} subclass.
  */
 public class CardsFragment extends ProcessPaymentFragment implements PaymentListener {
 
-    DatePickerDialog.OnDateSetListener mDateSetListener;
-    int mYear;
-    int mMonth;
-    int mDay;
-//    Boolean isNameOnCardValid = false;
     Boolean isCardNumberValid = false;
     Boolean isExpired = true;
     Boolean isCvvValid = false;
@@ -101,37 +99,49 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
 
         ((EditText)cardDetails.findViewById(R.id.expiryDatePickerEditText)).setFocusable(false);
 
-        mYear = Calendar.getInstance().get(Calendar.YEAR);
-        mMonth = Calendar.getInstance().get(Calendar.MONTH);
-        mDay = Calendar.getInstance().get(Calendar.DATE);
 
-        mDateSetListener = new DatePickerDialog.OnDateSetListener() {
+
+        cardDetails.findViewById(R.id.expiryDatePickerEditText).setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onDateSet(DatePicker datePicker, int i, int i2, int i3) {
-                ((TextView) cardDetails.findViewById(R.id.expiryDatePickerEditText)).setText("" + (i2 + 1) + " / " + i);
+            public void onClick(View v) {
+                final Dialog dialog = new Dialog(getActivity(), R.style.ProgressDialog);
+                View datePickerLayout = getActivity().getLayoutInflater().inflate(R.layout.date_picker, null);
+                dialog.setContentView(datePickerLayout);
+                dialog.setCancelable(false);
+                Button okButton = (Button) datePickerLayout.findViewById(R.id.datePickerOkButton);
+                final DatePicker datePicker = (DatePicker) datePickerLayout.findViewById(R.id.datePicker);
 
-                expiryMonth = i2 + 1;
-                expiryYear = i;
-                if (expiryYear > Calendar.getInstance().get(Calendar.YEAR)) {
-                    isExpired = false;
-                    valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
-                } else if (expiryYear == Calendar.getInstance().get(Calendar.YEAR) && expiryMonth - 1 >= Calendar.getInstance().get(Calendar.MONTH)) {
-                    isExpired = false;
-                    valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
-                } else {
-                    isExpired = true;
-                    invalid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
-                }
-            }
-        };
+                try { // lets hide the day spinner on pre lollipop devices
+                    Field datePickerFields[] = datePicker.getClass().getDeclaredFields();
+                    for (Field datePickerField : datePickerFields) {
+                        if ("mDayPicker".equals(datePickerField.getName()) || "mDaySpinner".equals(datePickerField.getName()) || "mDelegate".equals(datePickerField.getName())) {
+                            datePickerField.setAccessible(true);
+                            ((View) datePickerField.get(datePicker)).setVisibility(View.GONE);
+                        }
+                    }
+                } catch (Exception e) {
 
-        cardDetails.findViewById(R.id.expiryDatePickerEditText).setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View view, MotionEvent motionEvent) {
-                if (motionEvent.getAction() == MotionEvent.ACTION_UP) {
-                    Cards.customDatePicker(getActivity(), mDateSetListener, mYear, mMonth, mDay).show();
                 }
-                return false;
+                dialog.show();
+                okButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        expiryMonth = datePicker.getMonth() + 1;
+                        expiryYear = datePicker.getYear();
+                        ((EditText) cardDetails.findViewById(R.id.expiryDatePickerEditText)).setText("" + expiryMonth + " / " + expiryYear);
+                        if (expiryYear > Calendar.getInstance().get(Calendar.YEAR)) {
+                            isExpired = false;
+                            valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+                        } else if (expiryYear == Calendar.getInstance().get(Calendar.YEAR) && expiryMonth - 1 >= Calendar.getInstance().get(Calendar.MONTH)) {
+                            isExpired = false;
+                            valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+                        } else {
+                            isExpired = true;
+                            invalid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+                        }
+                        dialog.dismiss();
+                    }
+                });
             }
         });
 
@@ -156,7 +166,6 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
                     getArguments().remove(PayU.STORE_CARD);
                     cardDetails.findViewById(R.id.cardNameEditText).setVisibility(View.GONE);
                 }
-
             }
         });
 
@@ -180,8 +189,8 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
                     requiredParams.put("card_name", cardName);
                     requiredParams.put(PayU.STORE_CARD, "1");
                     startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
-                }else if(getArguments().getString("rewards") != null ) { // this comes from cash card fragment..citi reward
-                    requiredParams.put(PayU.BANKCODE, getArguments().getString("rewards"));
+                }else if(getArguments().getString("rewardPoint") != null ) { // this comes from cash card fragment..citi reward
+                    requiredParams.put(PayU.BANKCODE, getArguments().getString("rewardPoint"));
                     startPaymentProcessActivity(PayU.PaymentMode.CASH, requiredParams);
                 }else {
                     startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
@@ -201,12 +210,10 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
         cvvDrawable = getResources().getDrawable(R.drawable.lock);
         cardNameDrawable = getResources().getDrawable(R.drawable.user);
 
-//        nameOnCardDrawable.setAlpha(100);
         cardNumberDrawable.setAlpha(100);
         calenderDrawable.setAlpha(100);
         cvvDrawable.setAlpha(100);
 
-//        ((TextView) getActivity().findViewById(R.id.enterCardDetailsTextView)).setText(getString(R.string.enter_debit_card_details));
 
         ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, nameOnCardDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNumberDrawable, null);
@@ -231,30 +238,6 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
             }
         });
 
-
-       /* ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-                nameOnCard = charSequence.toString();
-                if (nameOnCard.length() > 1) {
-//                    isNameOnCardValid = true;
-                    valid(((EditText) getActivity().findViewById(R.id.nameOnCardEditText)), nameOnCardDrawable);
-                } else {
-//                    isNameOnCardValid = false;
-                    invalid(((EditText) getActivity().findViewById(R.id.nameOnCardEditText)), nameOnCardDrawable);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-
-            }
-        });*/
 
         ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).addTextChangedListener(new TextWatcher() {
             @Override
@@ -461,8 +444,6 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
     private void makeInvalid() {
         if (!isCardNumberValid && cardNumber.length() > 0 && !getActivity().findViewById(R.id.cardNumberEditText).isFocused())
             ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);
-       /* if (!isNameOnCardValid && nameOnCard.length() > 0 && !getActivity().findViewById(R.id.nameOnCardEditText).isFocused())
-            ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);*/
         if (!isCvvValid && cvv.length() > 0 && !getActivity().findViewById(R.id.cvvEditText).isFocused())
             ((EditText) getActivity().findViewById(R.id.cvvEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, getResources().getDrawable(R.drawable.error_icon), null);
     }
@@ -536,10 +517,8 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
             ((TextView) getActivity().findViewById(R.id.offerMessageTextView)).setText("");
             ((TextView) getActivity().findViewById(R.id.amountTextView)).setGravity(Gravity.CENTER);
             ((TextView) getActivity().findViewById(R.id.amountTextView)).setTextColor(Color.BLACK);
-//                        ((TextView) getActivity().findViewById(R.id.amountTextView)).setPaintFlags(((TextView) getActivity().findViewById(R.id.amountTextView)).getPaintFlags() & (~ Paint.STRIKE_THRU_TEXT_FLAG));
             ((TextView) getActivity().findViewById(R.id.amountTextView)).setPaintFlags(0);
             ((TextView) getActivity().findViewById(R.id.amountTextView)).setText(getString(R.string.amount, getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT)));
         }
     }
-
 }

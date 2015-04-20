@@ -37,7 +37,7 @@ import java.util.List;
 
 
 /**
- * A simple {@link Fragment} subclass.
+ * A simple {@link android.support.v4.app.Fragment} subclass.
  */
 public class StoreCardFragment extends Fragment implements PaymentListener {
 
@@ -284,25 +284,20 @@ public class StoreCardFragment extends Fragment implements PaymentListener {
     @Override
     public void onGetResponse(String responseMessage) {
         mProgressDialog.dismiss();
-        if (PayU.storedCards.length() == 0) {
-            new AlertDialog.Builder(getActivity())
-                    .setTitle(R.string.status)
-                    .setMessage(getString(R.string.something_went_wrong))
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int whichButton) {
+        String message;
+        if(PayU.storedCards != null && PayU.storedCards.length() >1)
+            message= responseMessage;
+        else
+            message = getString(R.string.something_went_wrong);
 
-                        }
-                    }).show();
-        } else {
-            new AlertDialog.Builder(getActivity())
-                    .setTitle(R.string.status)
-                    .setMessage(responseMessage)
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int whichButton) {
+        new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.status)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
 
-                        }
-                    }).show();
-        }
+                    }
+                }).show();
 //            Toast.makeText(getActivity(), response.get(0).toString(), Toast.LENGTH_LONG).show();
     }
 

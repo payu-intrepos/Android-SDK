@@ -1,5 +1,6 @@
 package com.payu.sdk;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
@@ -9,10 +10,9 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Message;
 import android.support.v4.app.FragmentActivity;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
@@ -21,40 +21,52 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import com.payu.custombrowser.Bank;
 import com.payu.custombrowser.PayUWebChromeClient;
 import org.apache.http.util.EncodingUtils;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-
 public class ProcessPaymentActivity extends FragmentActivity {
 
-    WebView webView;
-    ProgressDialog mProgressDialog;
+    private WebView webView;
+    private ProgressDialog mProgressDialog;
     private BroadcastReceiver mReceiver = null;
-    private  ProgressDialog progressDialog;
+    private ProgressDialog progressDialog;
+    private String checkValue;
+    private boolean checkProgress;
+    private Set<String> set;
+    private String webviewUrl;
 
-    private int checkUnavailable=0;
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        InputMethodManager imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
-        imm.toggleSoftInput(InputMethodManager.RESULT_HIDDEN, 0);
+
+        if(getIntent().getExtras()!=null && getIntent().getExtras().containsKey("postData") && !getIntent().getExtras().getString("postData").contains("pg=NB")) {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+            imm.toggleSoftInput(InputMethodManager.RESULT_HIDDEN, 0);
+        }
+
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+
+     /*   InputMethodManager inputManager = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputManager.hideSoftInputFromWindow((findViewById(android.R.id.content)).getWindowToken(), InputMethodManager.RESULT_HIDDEN);
+*/
         mProgressDialog = new ProgressDialog(this);
         setContentView(R.layout.activity_process_payment);
+
 
         webView = (WebView) findViewById(R.id.webview);
 
         try {
             Class.forName("com.payu.custombrowser.Bank");
 
-            Bank bank = new Bank() {
+           final Bank bank = new Bank() {
                 @Override
                 public void registerBroadcast(BroadcastReceiver broadcastReceiver, IntentFilter filter) {
                     mReceiver = broadcastReceiver;
@@ -71,7 +83,6 @@ public class ProcessPaymentActivity extends FragmentActivity {
 
                 @Override
                 public void onHelpUnavailable() {
-
                     findViewById(R.id.parent).setVisibility(View.GONE);
                     findViewById(R.id.trans_overlay).setVisibility(View.GONE);
                 }
@@ -89,14 +100,18 @@ public class ProcessPaymentActivity extends FragmentActivity {
                 }
 
                 @Override
-                public void showProgress() {
-                    progressBarVisibility(View.VISIBLE);
+                public void updateSet(Set<String> urlSet,String check){
+                            if (urlSet != null && urlSet.size() > 0 && webviewUrl!=null && !urlSet.contains(webviewUrl)) {
+                            progressBarVisibility(View.GONE);
+                        }
+
+                    set=urlSet;
+                    checkValue=check;
                 }
 
                 @Override
-                public void hideProgress() {
+                public void communicationError(){
                     progressBarVisibility(View.GONE);
-
                 }
 
             };
@@ -126,9 +141,41 @@ public class ProcessPaymentActivity extends FragmentActivity {
             webView.setWebChromeClient(new PayUWebChromeClient(bank) {
                 public void onProgressChanged(WebView view, int newProgress) {
                     super.onProgressChanged(view, newProgress);
+
                     progressBarVisibilityPayuChrome(View.VISIBLE);
+
+                    if(newProgress>=95) {
+                        if (checkProgress)
+                            progressBarVisibility(View.GONE);
+                    }
                 }
             });
+
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    super.onPageFinished(view, url);
+                }
+
+
+
+                @Override
+                public void onPageStarted(WebView view, String url, Bitmap favicon)
+                {
+                    super.onPageStarted(view, url, favicon);
+                    webviewUrl=url;
+                    if(set!=null && set.size()>0 && !set.contains(url)) {
+                        checkProgress = true;
+                    }
+
+                    //progressBarVisibility(View.GONE);
+                   if(checkValue!=null && url.contains(checkValue)) {
+                        bank.update();
+                    }
+                }
+            });
+
+
 
         } catch (ClassNotFoundException e) {
             webView.getSettings().setSupportMultipleWindows(true);
@@ -138,6 +185,8 @@ public class ProcessPaymentActivity extends FragmentActivity {
                 public void onSuccess() {
                     onSuccess("");
                 }
+
+
 
                 @JavascriptInterface
                 public void onSuccess(final String result) {
@@ -182,11 +231,12 @@ public class ProcessPaymentActivity extends FragmentActivity {
                     }
                 }
             });
+            webView.setWebViewClient(new WebViewClient());
         }
 
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
-        webView.setWebViewClient(new WebViewClient());
+
         webView.postUrl(Constants.PAYMENT_URL, EncodingUtils.getBytes(getIntent().getExtras().getString("postData"), "base64"));
     }
 
@@ -201,17 +251,21 @@ public class ProcessPaymentActivity extends FragmentActivity {
             e.printStackTrace();
         }
         if(!disableBack) {
+
             Intent intent = new Intent();
-            intent.putExtra("result", getString(R.string.cancel_due_to_back_pressed));
+            intent.putExtra("result", "");
             setResult(RESULT_CANCELED, intent);
             super.onBackPressed();
         }
     }
     public void progressBarVisibility(int visibility)
     {
+
         if(visibility==View.GONE || visibility==View.INVISIBLE ) {
-            if(progressDialog!=null && progressDialog.isShowing())
+
+            if(progressDialog!=null && progressDialog.isShowing()) {
                 progressDialog.dismiss();
+            }
         }
         else if (progressDialog==null || !progressDialog.isShowing())
         {
@@ -233,15 +287,16 @@ public class ProcessPaymentActivity extends FragmentActivity {
 
     public ProgressDialog showProgress(Context context) {
         LayoutInflater mInflater = LayoutInflater.from(context);
-        final Drawable[] drawables = {getResources().getDrawable(R.drawable.nopoint),
-                getResources().getDrawable(R.drawable.onepoint),
-                getResources().getDrawable(R.drawable.twopoint),
-                getResources().getDrawable(R.drawable.threepoint)
+        final Drawable[] drawables = {getResources().getDrawable(R.drawable.l_icon1),
+                getResources().getDrawable(R.drawable.l_icon2),
+                getResources().getDrawable(R.drawable.l_icon3),
+                getResources().getDrawable(R.drawable.l_icon4)
         };
 
         View layout = mInflater.inflate(R.layout.prog_dialog, null);
         final ImageView imageView; imageView = (ImageView) layout.findViewById(R.id.imageView);
         ProgressDialog progDialog = new ProgressDialog(context, R.style.ProgressDialog);
+
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             int i = -1;
@@ -270,4 +325,8 @@ public class ProcessPaymentActivity extends FragmentActivity {
         progDialog.setCanceledOnTouchOutside(false);
         return progDialog;
     }
+
+
+
+
 }

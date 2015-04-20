@@ -34,5 +34,6 @@
     <string name="store_card_check">Store this card</string>
     <string name="process_your_request">Processing Your Request</string>
     <string name="slow_connection">Slow Network.\nStill Connecting...</string>
-    <string name="cancel_due_to_back_pressed">Cancel transaction due to Back button pressed!</string>
+
+
 </resources>

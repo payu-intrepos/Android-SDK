@@ -27,9 +27,6 @@ android {
 }
 
 dependencies {
-    //    compile files('libs/CustomBrowser.aar')
-    //    compile(name:'CustomBrowser', ext:'aar')
-    //    compile project(':CustomBrowser')
     compile 'com.android.support:support-v4:21.0.3'
     compile project(':CustomBrowser')
 }

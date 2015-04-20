@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.DatePicker;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -91,15 +92,27 @@ public class Cards {
     }
 
     public static DatePickerDialog customDatePicker(Activity activity, DatePickerDialog.OnDateSetListener mDateSetListener, int mYear, int mMonth, int mDay) {
-        DatePickerDialog dpd = new DatePickerDialog(activity, mDateSetListener, mYear, mMonth, mDay);
+        DatePickerDialog dpd = new DatePickerDialog(activity,mDateSetListener, mYear, mMonth, mDay);
+        //android.R.style.Widget_Holo,
 //        dpd.getDatePicker().setMinDate(new Date().getTime() - 1000);
-        dpd.getDatePicker().setSpinnersShown(true);
+
+
+        if (Build.VERSION.SDK_INT >= 11) {
+            try {
+                Method m =   dpd.getDatePicker().getClass().getMethod("setCalendarViewShown", boolean.class);
+                m.invoke(  dpd.getDatePicker(), false);
+            }
+            catch (Exception e) {} // eat exception in our case
+        }
         if (Build.VERSION.SDK_INT >= 11) {
             dpd.getDatePicker().setMinDate(System.currentTimeMillis() - 1000);
         }
+
+
         try {
             Field[] datePickerDialogFields = dpd.getClass().getDeclaredFields();
             for (Field datePickerDialogField : datePickerDialogFields) {
+
                 if (datePickerDialogField.getName().equals("mDatePicker")) {
                     datePickerDialogField.setAccessible(true);
                     DatePicker datePicker = (DatePicker) datePickerDialogField.get(dpd);
@@ -112,7 +125,21 @@ public class Cards {
                     }
                 }
             }
+            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                int daySpinnerId = Resources.getSystem().getIdentifier("mDayPicker", "id", "android");
+
+                if (daySpinnerId != 0) {
+                    View daySpinner =   dpd.getDatePicker().findViewById(daySpinnerId);
+                    if (daySpinner != null) {
+                        daySpinner.setVisibility(View.GONE);
+                    }
+                }
+            }
+
+            dpd.getDatePicker().setSpinnersShown(true);
+            dpd.getDatePicker().setCalendarViewShown(false);
         } catch (Exception ex) {
+            ex.printStackTrace();
         }
         dpd.setTitle(null);
         return dpd;

@@ -40,7 +40,7 @@ import java.util.List;
 
 
 /**
- * A simple {@link Fragment} subclass.
+ * A simple {@link android.support.v4.app.Fragment} subclass.
  */
 
 public class StoredCardFragment extends ProcessPaymentFragment implements PaymentListener {

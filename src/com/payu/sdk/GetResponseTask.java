@@ -33,8 +33,6 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
     JSONObject response;
     private String localException = "";
 
-
-
     public GetResponseTask(PaymentListener responseListener) {
         this.mResponseListener = responseListener;
     }
@@ -50,25 +48,26 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
         try {
             httppost.setEntity(new UrlEncodedFormEntity(lists[0]));
             response = new JSONObject(EntityUtils.toString(httpclient.execute(httppost).getEntity()));
+            if(response.has("status") && response.getInt("status") == 0){ // not ok, some thing went wrong!
+                return response.has("msg") ? response.getString("msg") : response.getString("status");
+            }
         } catch (UnsupportedEncodingException e) {
+            return e.getMessage();
 //            e.printStackTrace();
-
-            return "Error: UnsupportedEncodingException " + e.getMessage();
         } catch (ClientProtocolException e) {
-//            e.printStackTrace();
-            return "Error: ClientProtocolException " + e.getMessage();
+            e.printStackTrace();
+            return e.getMessage();
         } catch (JSONException e) {
-//            e.printStackTrace();
-            return "Error: JSONException " + e.getMessage();
+            e.printStackTrace();
+            return e.getMessage();
         } catch (IOException e) {
-            return "Error: IOException "+ e.getMessage();
-//            e.printStackTrace();
+            e.printStackTrace();
+            return e.getMessage();
         }
-
 
         if(response.length() > 0 && lists[0].get(1).getValue().contentEquals(Constants.PAYMENT_RELATED_DETAILS)){ // this is get ibibo codes call
             try {
-                // we have two json objects, 1. usercards, 2. merchant ibibo codes
+                // we have  1. usercards, 2. merchant ibibo codes
                 JSONObject userCards = new JSONObject();
                 JSONObject ibiboCodes = new JSONObject();
                 userCards = response.getJSONObject("userCards");
@@ -114,6 +113,12 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
 
                 // banks available, enforce method
                 if (ibiboCodes.has("netbanking")) {
+
+                    JSONObject emptyObject = new JSONObject();
+                    emptyObject.put("code", " ");
+                    emptyObject.put("title", " ");
+                    PayU.availableBanks.put(emptyObject);
+
                     Iterator<String> bankKeysIterator = ibiboCodes.getJSONObject("netbanking").keys();
 
                     if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("netbanking")) {
@@ -143,10 +148,6 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
                     }
 
                     // set default option, we need an empty object.
-                    JSONObject emptyObject = new JSONObject();
-                    emptyObject.put("code", " ");
-                    emptyObject.put("title", " ");
-                    PayU.availableBanks.put(0, emptyObject);
 
                     PayU.availableBanks = jsonArraySort(PayU.availableBanks, "title");
                     if(Constants.SET_DEFAULT_NET_BANKING){
@@ -159,6 +160,13 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
                 }
 
                 if (ibiboCodes.has("emi")) {
+                    // add empty array
+                    JSONObject emptyObject = new JSONObject();
+                    emptyObject.put("emiCode", " ");
+                    emptyObject.put("emiInterval", " ");
+                    emptyObject.put("bankName", " ");
+                    PayU.availableEmi.put(emptyObject);
+
                     Iterator<String> emiKeysIterator = ibiboCodes.getJSONObject("emi").keys();
                     if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("Emi")) {
                         while (emiKeysIterator.hasNext()) {
@@ -186,11 +194,7 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
                         }
                     }
 
-                    // add empty array
-                    JSONObject emptyObject = new JSONObject();
-                    emptyObject.put("emiCode", " ");
-                    emptyObject.put("emiInterval", " ");
-                    emptyObject.put("bankName", " ");
+
                     PayU.availableEmi = jsonArraySort(PayU.availableEmi, "bankName");
                     JSONObject emiObject = new JSONObject();
                     emiObject.put("emiCode", "default");
@@ -206,10 +210,10 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
                     Iterator<String> cashCardIterator = ibiboCodes.getJSONObject("cashcard").keys();
                     // for default options
 
-                    /*JSONObject cashObject = new JSONObject();
-                    cashObject.put("code", "null");
-                    cashObject.put("name", "");
-                    PayU.availableCashCards.put(cashObject);*/
+                    JSONObject emptyEmiObject = new JSONObject();
+                    emptyEmiObject.put("code", " ");
+                    emptyEmiObject.put("name", " ");
+                    PayU.availableCashCards.put(emptyEmiObject);
 
                     if (PayU.enforcePayMethod == null || enforcePayMethodsSet.contains("cashcard")) {
                         while (cashCardIterator.hasNext()) {
