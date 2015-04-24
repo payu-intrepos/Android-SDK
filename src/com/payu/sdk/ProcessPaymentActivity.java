@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -119,17 +120,15 @@ public class ProcessPaymentActivity extends FragmentActivity {
             args.putInt("webView", R.id.webview);
             args.putInt("tranLayout",R.id.trans_overlay);
             String [] list =  getIntent().getExtras().getString("postData").split("&");
-            HashMap<String , String> intentMap = new HashMap<String , String>();
+            String txnId = null;
             for (String item : list) {
-                String [] list1 =  item.split("=");
-                intentMap.put(list1[0], list1[1]);
+                if(item.contains("txnid")){
+                    txnId = item.split("=")[1];
+                    break;
+                }
             }
-            if(getIntent().getExtras().containsKey("txnid")) {
-                args.putString(Bank.TXN_ID, getIntent().getStringExtra("txnid"));
-            } else {
-                args.putString(Bank.TXN_ID, intentMap.get("txnid"));
-            }
-            //args.putString(Bank.TXN_ID, "" + System.currentTimeMillis());
+            txnId = txnId == null ? String.valueOf(System.currentTimeMillis()) : txnId;
+            args.putString(Bank.TXN_ID, txnId);
             if(getIntent().getExtras().containsKey("showCustom")) {
                 args.putBoolean("showCustom", getIntent().getBooleanExtra("showCustom", false));
             }
@@ -297,7 +296,7 @@ public class ProcessPaymentActivity extends FragmentActivity {
         final ImageView imageView; imageView = (ImageView) layout.findViewById(R.id.imageView);
         ProgressDialog progDialog = new ProgressDialog(context, R.style.ProgressDialog);
 
-        Timer timer = new Timer();
+        final Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             int i = -1;
             @Override
@@ -323,10 +322,12 @@ public class ProcessPaymentActivity extends FragmentActivity {
         progDialog.setContentView(layout);
         progDialog.setCancelable(true);
         progDialog.setCanceledOnTouchOutside(false);
+        progDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                timer.cancel();
+            }
+        });
         return progDialog;
     }
-
-
-
-
 }
