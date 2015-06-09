@@ -1,13 +1,19 @@
 package com.payu.sdk;
 
 import android.os.AsyncTask;
+import android.util.Log;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.conn.ssl.X509HostnameVerifier;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.SingleClientConnManager;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -24,6 +30,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import javax.net.ssl.HostnameVerifier;
+
 /**
  * Created by franklin on 10/7/14.
  */
@@ -38,7 +46,7 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
     }
 
     @Override
-    protected String doInBackground(List<NameValuePair>... lists) {
+    protected String doInBackground(List<NameValuePair>[] lists) {
 
         HttpClient httpclient = new DefaultHttpClient();
         HttpPost httppost = new HttpPost(Constants.FETCH_DATA_URL);
@@ -71,6 +79,7 @@ public class GetResponseTask extends AsyncTask<List<NameValuePair>, String, Stri
                 JSONObject userCards = new JSONObject();
                 JSONObject ibiboCodes = new JSONObject();
                 userCards = response.getJSONObject("userCards");
+
                 ibiboCodes = response.getJSONObject("ibiboCodes");
 
                 //ibibo codes

@@ -88,6 +88,7 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
 
             List<NameValuePair> postParams = null;
 
+
             try {
                 postParams = PayU.getInstance(getActivity()).getParams(Constants.GET_VAS, varList);
                 GetResponseTask getResponse = new GetResponseTask(CardsFragment.this);
@@ -175,7 +176,7 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
                 Params requiredParams = new Params();
 
                 String nameOnCard = ((TextView) cardDetails.findViewById(R.id.nameOnCardEditText)).getText().toString();
-                if(nameOnCard.length() < 3){
+                if (nameOnCard.length() < 3) {
                     nameOnCard = "PayU " + nameOnCard;
                 }
 
@@ -189,10 +190,10 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
                     requiredParams.put("card_name", cardName);
                     requiredParams.put(PayU.STORE_CARD, "1");
                     startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
-                }else if(getArguments().getString("rewardPoint") != null ) { // this comes from cash card fragment..citi reward
+                } else if (getArguments().getString("rewardPoint") != null) { // this comes from cash card fragment..citi reward
                     requiredParams.put(PayU.BANKCODE, getArguments().getString("rewardPoint"));
                     startPaymentProcessActivity(PayU.PaymentMode.CASH, requiredParams);
-                }else {
+                } else {
                     startPaymentProcessActivity(PayU.PaymentMode.CC, requiredParams);
                 }
             }
@@ -203,7 +204,6 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-
         nameOnCardDrawable = getResources().getDrawable(R.drawable.user);
         cardNumberDrawable = getResources().getDrawable(R.drawable.card);
         calenderDrawable = getResources().getDrawable(R.drawable.calendar);
@@ -220,6 +220,25 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
         ((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, calenderDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cvvEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cvvDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cardNameEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNameDrawable, null);
+
+
+        // lets get the data from bundle
+        if(savedInstanceState != null){
+            expiryMonth = savedInstanceState.getInt("ccexpmon");
+            expiryYear = savedInstanceState.getInt("ccexpyr");
+
+            if (expiryYear > Calendar.getInstance().get(Calendar.YEAR)) {
+                isExpired = false;
+                valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+            } else if (expiryYear == Calendar.getInstance().get(Calendar.YEAR) && expiryMonth - 1 >= Calendar.getInstance().get(Calendar.MONTH)) {
+                isExpired = false;
+                valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+            } else {
+                isExpired = true;
+                invalid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+            }
+        }
+
 
         ((EditText) getActivity().findViewById(R.id.cardNameEditText)).addTextChangedListener(new TextWatcher() {
             @Override
@@ -520,5 +539,14 @@ public class CardsFragment extends ProcessPaymentFragment implements PaymentList
             ((TextView) getActivity().findViewById(R.id.amountTextView)).setPaintFlags(0);
             ((TextView) getActivity().findViewById(R.id.amountTextView)).setText(getString(R.string.amount, getActivity().getIntent().getExtras().getDouble(PayU.AMOUNT)));
         }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        // lets put the expiry month and expiry year here.
+
+        outState.putInt("ccexpmon", expiryMonth);
+        outState.putInt("ccexpyr", expiryYear);
     }
 }

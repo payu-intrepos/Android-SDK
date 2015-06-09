@@ -3,6 +3,8 @@ package com.payu.sdk;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -62,6 +64,7 @@ public class PayU {
     public static final String STORE_CARD = "store_card";
     public static final String UDF = "device_type";
     public static final String SDK = "1";
+
 //    public static final String DISABLE_PAYMENT_PROCESS_BACK_BUTTON = "disable_web_view_back";
     public static final String DISABLE_CUSTOM_BROWSER = "showCustom";
     public static final String INSTRUMENT_TYPE = "instrument_type";
@@ -87,6 +90,9 @@ public class PayU {
     public static final String DINR = "DINR";
     public static final String JCB = "JCB";
     public static final String SMAE = "SMAE";
+
+    private static final int SDK_VERSION_CODE = 3;
+    private static final String SDK_VERSION_NAME = "2.4";
 
 
     public static JSONArray availableBanks;
@@ -123,6 +129,10 @@ public class PayU {
 
     public static long dataFetchedAt;
 
+    public static void reset() {
+        PayU.INSTANCE = null;
+    }
+
 
     public static enum PaymentMode {
         CC, DC, NB, EMI, PAYU_MONEY, STORED_CARDS, CASH
@@ -154,23 +164,34 @@ public class PayU {
     }
 
     public static synchronized PayU getInstance(Activity activity) {
-        if (INSTANCE == null) {
+        INSTANCE = null;
+        try {
+            Bundle bundle = activity.getPackageManager().getApplicationInfo(activity.getPackageName(), PackageManager.GET_META_DATA).metaData;
+            if(Constants.SDK_HASH_GENERATION){ // not recommended though.
+                INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), bundle.getString("payu_merchant_salt"));
+            }else{ // highly recommend
+                INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), null);
+            }
+
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Failed to load meta-data, NameNotFound: " + e.getMessage());
+        } catch (NullPointerException e) {
+            Log.e(TAG, "Failed to load meta-data, NullPointer: " + e.getMessage());
+        }
+
+        return INSTANCE;
+
+        /*if (INSTANCE == null) {
             try {
                 Bundle bundle = activity.getPackageManager().getApplicationInfo(activity.getPackageName(), PackageManager.GET_META_DATA).metaData;
-                if(Constants.SDK_HASH_GENERATION){ // not recommended though.
-                    INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), bundle.getString("payu_merchant_salt"));
-                }else{ // highly recommend
-                    INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), null);
-                }
-
+                INSTANCE = new PayU(activity, bundle.getString("payu_merchant_id"), bundle.getString("payu_merchant_salt"));
             } catch (PackageManager.NameNotFoundException e) {
                 Log.e(TAG, "Failed to load meta-data, NameNotFound: " + e.getMessage());
             } catch (NullPointerException e) {
                 Log.e(TAG, "Failed to load meta-data, NullPointer: " + e.getMessage());
             }
-
         }
-        return INSTANCE;
+        return INSTANCE;*/
     }
 
 
@@ -273,10 +294,11 @@ public class PayU {
             postData = "";
 
             for (String key : params.keySet()) {
-                if(key.contentEquals(PayU.USER_CREDENTIALS))// usercredential should have : (ex merchant:userId)
-                    postData += key + "=" + params.get(key) + "&";
-                else
+                if(key.contentEquals(PayU.SURL) || key.contentEquals(PayU.FURL)){ // encode only ulrs
                     postData += key + "=" + URLEncoder.encode(params.get(key), "UTF-8") + "&";
+                }else{
+                    postData += key + "=" + params.get(key) + "&";
+                }
             }
 
 
@@ -349,5 +371,12 @@ public class PayU {
         //sdk user define fields.
         params.add(new BasicNameValuePair(UDF, SDK));
         return params;
+    }
+
+    public static String getSdkVersionName(){
+        return SDK_VERSION_NAME;
+    }
+    public static int getSdkVersionCode(){
+        return SDK_VERSION_CODE;
     }
 }

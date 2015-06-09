@@ -3,6 +3,7 @@ package com.payu.sdk.fragments;
 
 import android.app.Activity;
 import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
@@ -16,6 +17,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -37,6 +39,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.reflect.Field;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -142,7 +145,7 @@ public class EmiDetailsFragment extends ProcessPaymentFragment implements Paymen
         mMonth = Calendar.getInstance().get(Calendar.MONTH);
         mDay = Calendar.getInstance().get(Calendar.DATE);
 
-        mDateSetListener = new DatePickerDialog.OnDateSetListener() {
+        /*mDateSetListener = new DatePickerDialog.OnDateSetListener() {
             @Override
             public void onDateSet(DatePicker datePicker, int i, int i2, int i3) {
                 ((TextView) emi_fragment.findViewById(R.id.expiryDatePickerEditText)).setText("" + (i2 + 1) + " / " + i);
@@ -168,6 +171,52 @@ public class EmiDetailsFragment extends ProcessPaymentFragment implements Paymen
                 if (motionEvent.getAction() == MotionEvent.ACTION_UP)
                     Cards.customDatePicker(getActivity(), mDateSetListener, mYear, mMonth, mDay).show();
                 return false;
+            }
+        });*/
+
+        ((EditText)emi_fragment.findViewById(R.id.expiryDatePickerEditText)).setFocusable(false);
+
+        emi_fragment.findViewById(R.id.expiryDatePickerEditText).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final Dialog dialog = new Dialog(getActivity(), R.style.ProgressDialog);
+                View datePickerLayout = getActivity().getLayoutInflater().inflate(R.layout.date_picker, null);
+                dialog.setContentView(datePickerLayout);
+                dialog.setCancelable(false);
+                Button okButton = (Button) datePickerLayout.findViewById(R.id.datePickerOkButton);
+                final DatePicker datePicker = (DatePicker) datePickerLayout.findViewById(R.id.datePicker);
+
+                try { // lets hide the day spinner on pre lollipop devices
+                    Field datePickerFields[] = datePicker.getClass().getDeclaredFields();
+                    for (Field datePickerField : datePickerFields) {
+                        if ("mDayPicker".equals(datePickerField.getName()) || "mDaySpinner".equals(datePickerField.getName()) || "mDelegate".equals(datePickerField.getName())) {
+                            datePickerField.setAccessible(true);
+                            ((View) datePickerField.get(datePicker)).setVisibility(View.GONE);
+                        }
+                    }
+                } catch (Exception e) {
+
+                }
+                dialog.show();
+                okButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        expiryMonth = datePicker.getMonth() + 1;
+                        expiryYear = datePicker.getYear();
+                        ((EditText) emi_fragment.findViewById(R.id.expiryDatePickerEditText)).setText("" + expiryMonth + " / " + expiryYear);
+                        if (expiryYear > Calendar.getInstance().get(Calendar.YEAR)) {
+                            isExpired = false;
+                            valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+                        } else if (expiryYear == Calendar.getInstance().get(Calendar.YEAR) && expiryMonth - 1 >= Calendar.getInstance().get(Calendar.MONTH)) {
+                            isExpired = false;
+                            valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+                        } else {
+                            isExpired = true;
+                            invalid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+                        }
+                        dialog.dismiss();
+                    }
+                });
             }
         });
 
@@ -223,6 +272,24 @@ public class EmiDetailsFragment extends ProcessPaymentFragment implements Paymen
         ((EditText) getActivity().findViewById(R.id.cardNumberEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cardNumberDrawable, null);
         ((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, calenderDrawable, null);
         ((EditText) getActivity().findViewById(R.id.cvvEditText)).setCompoundDrawablesWithIntrinsicBounds(null, null, cvvDrawable, null);
+
+        // lets get the data from bundle
+        if(savedInstanceState != null){
+            expiryMonth = savedInstanceState.getInt("ccexpmon");
+            expiryYear = savedInstanceState.getInt("ccexpyr");
+            bankCode = savedInstanceState.getString("bankcode");
+
+            if (expiryYear > Calendar.getInstance().get(Calendar.YEAR)) {
+                isExpired = false;
+                valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+            } else if (expiryYear == Calendar.getInstance().get(Calendar.YEAR) && expiryMonth - 1 >= Calendar.getInstance().get(Calendar.MONTH)) {
+                isExpired = false;
+                valid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+            } else {
+                isExpired = true;
+                invalid(((EditText) getActivity().findViewById(R.id.expiryDatePickerEditText)), calenderDrawable);
+            }
+        }
 
         ((EditText) getActivity().findViewById(R.id.nameOnCardEditText)).addTextChangedListener(new TextWatcher() {
 
@@ -419,20 +486,23 @@ public class EmiDetailsFragment extends ProcessPaymentFragment implements Paymen
     @Override
     public void onGetResponse(String responseMessage) {
 
-        if(mProgressDialog.isShowing()){
-            mProgressDialog.dismiss();
-        }
-        if(Constants.DEBUG){
-            Toast.makeText(getActivity(), responseMessage, Toast.LENGTH_SHORT).show();
-        }
-        if(responseMessage.startsWith("Error:")){ // oops something went wrong.
-            Intent intent = new Intent();
-            intent.putExtra("result", responseMessage);
-            getActivity().setResult(Activity.RESULT_CANCELED, intent);
-            getActivity().finish();
-        }
-        if(PayU.availableEmi != null){
-            setupAdapter();
+        if(getActivity() != null && !getActivity().isFinishing()) {
+
+            if (mProgressDialog == null && mProgressDialog.isShowing()) {
+                mProgressDialog.dismiss();
+            }
+            if (Constants.DEBUG) {
+                Toast.makeText(getActivity(), responseMessage, Toast.LENGTH_SHORT).show();
+            }
+            if (responseMessage != null && responseMessage.startsWith("Error:")) { // oops something went wrong.
+                Intent intent = new Intent();
+                intent.putExtra("result", responseMessage);
+                getActivity().setResult(Activity.RESULT_CANCELED, intent);
+                getActivity().finish();
+            }
+            if (PayU.availableEmi != null) {
+                setupAdapter();
+            }
         }
     }
 
@@ -519,5 +589,15 @@ public class EmiDetailsFragment extends ProcessPaymentFragment implements Paymen
 
                 }
             });
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        // lets put the expiry month and expiry year here.
+
+        outState.putInt("ccexpmon", expiryMonth);
+        outState.putInt("ccexpyr", expiryYear);
+        outState.putString("bankcode", bankCode);
     }
 }

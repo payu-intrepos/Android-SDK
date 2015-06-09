@@ -123,45 +123,47 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
     }
 
     private void setupAdapter() {
+        if(getActivity() != null && !getActivity().isFinishing()) {
 
-        NetBankingAdapter adapter = new NetBankingAdapter(getActivity(), PayU.availableBanks);
+            NetBankingAdapter adapter = new NetBankingAdapter(getActivity(), PayU.availableBanks);
 
-        Spinner netBankingSpinner = (Spinner) getActivity().findViewById(R.id.netBankingSpinner);
-        netBankingSpinner.setAdapter(adapter);
+            Spinner netBankingSpinner = (Spinner) getActivity().findViewById(R.id.netBankingSpinner);
+            netBankingSpinner.setAdapter(adapter);
 
-        netBankingSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+            netBankingSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
 
-                try {
-                    bankCode = ((JSONObject) adapterView.getAdapter().getItem(i)).getString("code");
+                    try {
+                        bankCode = ((JSONObject) adapterView.getAdapter().getItem(i)).getString("code");
 
 
-                    if (bankCode.contentEquals("default")) {
-                        //disable the button
+                        if (bankCode.contentEquals("default")) {
+                            //disable the button
 //                        getActivity().findViewById(R.id.nbPayButton).setBackgroundResource(R.drawable.button);
-                        getActivity().findViewById(R.id.nbPayButton).setEnabled(false);
-                    } else {
-                        //enable the button
+                            getActivity().findViewById(R.id.nbPayButton).setEnabled(false);
+                        } else {
+                            //enable the button
 //                        getActivity().findViewById(R.id.nbPayButton).setBackgroundResource(R.drawable.button_enabled);
-                        if(PayU.netBankingStatus != null && PayU.netBankingStatus.get(bankCode) == 0){
-                            ((TextView)getActivity().findViewById(R.id.netBankingErrorText)).setText("Oops! " + ((JSONObject) adapterView.getAdapter().getItem(i)).getString("title") + " seems to be down. We recommend you pay using any other means of payment." );
-                            getActivity().findViewById(R.id.netBankingErrorText).setVisibility(View.VISIBLE);
-                        }else{
-                            getActivity().findViewById(R.id.netBankingErrorText).setVisibility(View.GONE);
+                            if (PayU.netBankingStatus != null && PayU.netBankingStatus.get(bankCode) == 0) {
+                                ((TextView) getActivity().findViewById(R.id.netBankingErrorText)).setText("Oops! " + ((JSONObject) adapterView.getAdapter().getItem(i)).getString("title") + " seems to be down. We recommend you pay using any other means of payment.");
+                                getActivity().findViewById(R.id.netBankingErrorText).setVisibility(View.VISIBLE);
+                            } else {
+                                getActivity().findViewById(R.id.netBankingErrorText).setVisibility(View.GONE);
+                            }
+                            getActivity().findViewById(R.id.nbPayButton).setEnabled(true);
                         }
-                        getActivity().findViewById(R.id.nbPayButton).setEnabled(true);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
                 }
-            }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
+                @Override
+                public void onNothingSelected(AdapterView<?> adapterView) {
 
-            }
-        });
+                }
+            });
+        }
 
     }
 
@@ -172,13 +174,15 @@ public class NetBankingFragment extends ProcessPaymentFragment implements Paymen
 
     @Override
     public void onGetResponse(String responseMessage) {
-        // setup adapter
-        if(mProgressDialog.isShowing())
-            mProgressDialog.dismiss();
-        if(PayU.availableBanks != null)
-            setupAdapter();
-        if(Constants.DEBUG)
-            Toast.makeText(getActivity(), responseMessage, Toast.LENGTH_SHORT).show();
+        if(getActivity() != null && !getActivity().isFinishing()) {
+            // setup adapter
+            if (mProgressDialog != null && mProgressDialog.isShowing())
+                mProgressDialog.dismiss();
+            if (PayU.availableBanks != null)
+                setupAdapter();
+            if (Constants.DEBUG)
+                Toast.makeText(getActivity(), responseMessage, Toast.LENGTH_SHORT).show();
+        }
     }
 
 }

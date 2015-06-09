@@ -5,6 +5,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
+import android.util.Log;
 import android.widget.TextView;
 
 import com.payu.sdk.exceptions.HashException;
@@ -39,6 +40,7 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
     }
 
 
+
     /*@Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -58,6 +60,10 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
         return super.onOptionsItemSelected(item);
     }*/
 
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+    }
     @Override
     public void onPaymentOptionSelected(PayU.PaymentMode paymentMode) {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
@@ -131,6 +137,7 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
         payment = builder.create();
 
         String postData = PayU.getInstance(this).createPayment(payment, requiredParams);
+        Log.d("postdata", postData);
 
         Intent intent = new Intent(this, ProcessPaymentActivity.class);
         intent.putExtra(Constants.POST_DATA, postData);
@@ -144,7 +151,6 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
 
     }
 
-
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -157,6 +163,7 @@ public class PaymentOptionsActivity extends FragmentActivity implements PaymentL
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == PayU.RESULT) {
+
             setResult(resultCode, data);
             finish();
         }

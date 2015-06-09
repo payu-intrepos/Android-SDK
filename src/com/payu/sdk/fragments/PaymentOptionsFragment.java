@@ -31,6 +31,11 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
     PayU.PaymentMode[] paymentOptions;
     private PayU.PaymentMode[] mAvailableOptions;
 
+
+    public PaymentOptionsFragment(){
+
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,7 +78,6 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
     @Override
     public void onDetach() {
         super.onDetach();
-//        mListener = null;
         mPaymentListener = null;
     }
 
@@ -81,11 +85,12 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        mProgressDialog.setMessage(getString(R.string.please_wait));
-        mProgressDialog.setIndeterminate(true);
-        mProgressDialog.setCancelable(false);
-        mProgressDialog.show();
-
+        if(getActivity() != null && !isRemoving() && isAdded()){
+            mProgressDialog.setMessage(getString(R.string.please_wait));
+            mProgressDialog.setIndeterminate(true);
+            mProgressDialog.setCancelable(false);
+            mProgressDialog.show();
+        }
 //        PayU.PaymentMode[] paymentOptions;
 
         if (paymentOptions == null) {
@@ -189,16 +194,19 @@ public class PaymentOptionsFragment extends Fragment implements PaymentListener 
             adapter = new PaymentModeAdapter(getActivity(), paymentOptions);
         }
 
-        ListView listView = (ListView) getActivity().findViewById(R.id.paymentOptionsListView);
-        listView.setAdapter(adapter);
+        if(getActivity() != null){
+            ListView listView = (ListView) getActivity().findViewById(R.id.paymentOptionsListView);
+            listView.setAdapter(adapter);
 
-        mProgressDialog.dismiss();
+            mProgressDialog.dismiss();
 
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                mPaymentListener.onPaymentOptionSelected((PayU.PaymentMode) adapterView.getAdapter().getItem(i));
-            }
-        });
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                    mPaymentListener.onPaymentOptionSelected((PayU.PaymentMode) adapterView.getAdapter().getItem(i));
+                }
+            });
+        }
+
     }
 }

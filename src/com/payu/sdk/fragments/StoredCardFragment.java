@@ -100,19 +100,6 @@ public class StoredCardFragment extends ProcessPaymentFragment implements Paymen
 
     }
 
-    @Override
-    public void onGetResponse(String responseMessage) {
-
-        if(Constants.DEBUG){
-            Toast.makeText(getActivity(), responseMessage, Toast.LENGTH_SHORT).show();
-        }
-
-        if(PayU.storedCards != null){
-            setupAdapter();
-        }
-    }
-
-
     private void makePayment(JSONObject selectedCard, String cvv) {
         Params requiredParams = new Params();
         try {
@@ -178,14 +165,15 @@ public class StoredCardFragment extends ProcessPaymentFragment implements Paymen
 
     private void fetchStoredCards(){
 
-        if(mProgressDialog == null)
-            mProgressDialog = new ProgressDialog(getActivity());
+        if(getActivity()!=null && !getActivity().isFinishing()) {
+            if (mProgressDialog == null)
+                mProgressDialog = new ProgressDialog(getActivity());
 
-        mProgressDialog.setMessage(getString(R.string.please_wait));
-        mProgressDialog.setIndeterminate(true);
-        mProgressDialog.setCancelable(false);
-        mProgressDialog.show();
-
+            mProgressDialog.setMessage(getString(R.string.please_wait));
+            mProgressDialog.setIndeterminate(true);
+            mProgressDialog.setCancelable(false);
+            mProgressDialog.show();
+        }
 
         List<NameValuePair> postParams = null;
 
@@ -204,113 +192,145 @@ public class StoredCardFragment extends ProcessPaymentFragment implements Paymen
     private void setupAdapter() {
 
         StoredCardAdapter adapter = new StoredCardAdapter(getActivity(), PayU.storedCards);
-
-        if (PayU.storedCards.length() < 1) {
-            getActivity().findViewById(R.id.noCardFoundTextView).setVisibility(View.VISIBLE);
-            getActivity().findViewById(R.id.savedCardTextView).setVisibility(View.GONE);
-        }
-        ListView listView = (ListView) getActivity().findViewById(R.id.storedCardListView);
-        listView.setAdapter(adapter);
-
-        mProgressDialog.dismiss();
-
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {// make payment.
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-
-                if (SystemClock.elapsedRealtime() - mLastClickTime < 1000){ // to prevent quick double click.
-                    return;
-                }
-                mLastClickTime = SystemClock.elapsedRealtime();
-
-                final JSONObject selectedCard = (JSONObject) adapterView.getAdapter().getItem(i);
-                final EditText input = new EditText(getActivity());
-                LinearLayout linearLayout = new LinearLayout(getActivity());
-                linearLayout.setOrientation(LinearLayout.VERTICAL);
-                LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                layoutParams.setMargins(50, 0, 50, 0);
-                input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                input.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                int cvvLength;
-                try {
-                    input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(selectedCard.getString("card_no").matches("^3[47]+[0-9|X]*") ? 4 :3)});
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                input.setBackgroundResource(R.drawable.rectangle_box);
-                input.setLines(1);
-                input.setCompoundDrawablesWithIntrinsicBounds(null, null, getActivity().getResources().getDrawable(R.drawable.lock), null);
-                linearLayout.addView(input, layoutParams);
-
-                final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-                builder.setView(linearLayout);
-                builder.setTitle(Constants.CVV_TITLE);
-                builder.setMessage(Constants.CVV_MESSAGE);
-                builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        makePayment(selectedCard, input.getText().toString());
-                    }
-                });
-
-                builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-
-                    }
-                });
-
-                final AlertDialog dialog = builder.create();
-
-                if(!dialog.isShowing())
-                    dialog.show();
-
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false); // initially ok button is disabled
-
-                input.addTextChangedListener( new TextWatcher() {
-                    @Override
-                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-                    }
-
-                    @Override
-                    public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-                    }
-
-                    @Override
-                    public void afterTextChanged(Editable s) {
-                        try {
-                            if((selectedCard.getString("card_no").matches("^3[47]+[0-9|X]*")  && input.getText().length() == 4) || (!selectedCard.getString("card_no").matches("^3[47]+[0-9|X]*")) && input.getText().length() == 3){ // ok allow the user to make payment
-                                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
-                            }else {// no dont allow the user to make payment
-                                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-                            }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
+        if (getActivity() != null) {
+            if (PayU.storedCards.length() < 1) {
+                getActivity().findViewById(R.id.noCardFoundTextView).setVisibility(View.VISIBLE);
+                getActivity().findViewById(R.id.savedCardTextView).setVisibility(View.GONE);
             }
-        });
+        }
+        if (getActivity() != null) {
+            ListView listView = (ListView) getActivity().findViewById(R.id.storedCardListView);
+            listView.setAdapter(adapter);
 
-        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {// delete card.
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+            mProgressDialog.dismiss();
+
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {// make payment.
+                @Override
+                public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+
+                    if (SystemClock.elapsedRealtime() - mLastClickTime < 1000) { // to prevent quick double click.
+                        return;
+                    }
+                    mLastClickTime = SystemClock.elapsedRealtime();
+
+                    final JSONObject selectedCard = (JSONObject) adapterView.getAdapter().getItem(i);
+                    final EditText input = new EditText(getActivity());
+                    LinearLayout linearLayout = new LinearLayout(getActivity());
+                    linearLayout.setOrientation(LinearLayout.VERTICAL);
+                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    layoutParams.setMargins(50, 0, 50, 0);
+                    input.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                    input.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                    int cvvLength;
+                    try {
+                        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(selectedCard.getString("card_no").matches("^3[47]+[0-9|X]*") ? 4 : 3)});
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    input.setBackgroundResource(R.drawable.rectangle_box);
+                    input.setLines(1);
+                    input.setCompoundDrawablesWithIntrinsicBounds(null, null, getActivity().getResources().getDrawable(R.drawable.lock), null);
+                    linearLayout.addView(input, layoutParams);
+
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                    builder.setView(linearLayout);
+                    builder.setTitle(Constants.CVV_TITLE);
+                    builder.setMessage(Constants.CVV_MESSAGE);
+                    builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            makePayment(selectedCard, input.getText().toString());
+                        }
+                    });
+
+                    builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                        }
+                    });
+
+                    final AlertDialog dialog = builder.create();
+
+                    if (!dialog.isShowing())
+                        dialog.show();
+
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false); // initially ok button is disabled
+
+                    input.addTextChangedListener(new TextWatcher() {
+                        @Override
+                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                        }
+
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                        }
+
+                        @Override
+                        public void afterTextChanged(Editable s) {
+                            try {
+                                if ((selectedCard.getString("card_no").matches("^3[47]+[0-9|X]*") && input.getText().length() == 4) || (!selectedCard.getString("card_no").matches("^3[47]+[0-9|X]*")) && input.getText().length() == 3) { // ok allow the user to make payment
+                                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                                } else {// no dont allow the user to make payment
+                                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                                }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
+            });
+
+            listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {// delete card.
+                @Override
+                public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 
 
-                if (SystemClock.elapsedRealtime() - mLastClickTime < 1000) { // to prevent double click
+                    if (SystemClock.elapsedRealtime() - mLastClickTime < 1000) { // to prevent double click
+                        return false;
+                    }
+                    mLastClickTime = SystemClock.elapsedRealtime();
+
+                    final JSONObject selectedCard = (JSONObject) parent.getAdapter().getItem(position);
+
+                    confirmDelete(selectedCard);
+
                     return false;
                 }
-                mLastClickTime = SystemClock.elapsedRealtime();
+            });
+        }
+    }
 
-                final JSONObject selectedCard = (JSONObject) parent.getAdapter().getItem(position);
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if(mProgressDialog != null  && mProgressDialog.isShowing()){
+            mProgressDialog.dismiss();
+        }
+    }
 
-                confirmDelete(selectedCard);
-
-                return false;
+    @Override
+    public void onGetResponse(String responseMessage) {
+        if(getActivity() != null && getActivity().getBaseContext()!=null && !getActivity().isFinishing() && !isRemoving()){
+            if(Constants.DEBUG){
+                Toast.makeText(getActivity(), responseMessage, Toast.LENGTH_SHORT).show();
             }
-        });
+
+            if(mProgressDialog != null  && mProgressDialog.isShowing()){
+                mProgressDialog.dismiss();
+            }
+
+            if(responseMessage.contains("deleted successfully")){
+                fetchStoredCards();
+            }
+
+            if(PayU.storedCards != null){
+                setupAdapter();
+            }
+        }
     }
 
 }

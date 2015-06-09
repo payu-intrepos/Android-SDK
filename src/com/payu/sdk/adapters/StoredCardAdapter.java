@@ -69,7 +69,6 @@ public class StoredCardAdapter extends BaseAdapter {
             e.printStackTrace();
         }
 
-
         return view;
 
     }
