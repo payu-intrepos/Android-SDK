@@ -2,34 +2,23 @@ apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 22
-    buildToolsVersion '22.0.1'
-    defaultConfig {
-        minSdkVersion 9
-        targetSdkVersion 21
-        versionCode 3
-        versionName '2.4'
-    }
+    buildToolsVersion "22.0.1"
 
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 22
+        versionCode 4
+        versionName "1.4"
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
-
-    sourceSets {
-        main {
-            manifest.srcFile 'AndroidManifest.xml'
-            java.srcDirs = ['src']
-            res.srcDirs = ['res']
-        }
-    }
 }
 
 dependencies {
-    //    compile files('libs/CustomBrowser.aar')
-    //    compile(name:'CustomBrowser', ext:'aar')
-    //    compile project(':CustomBrowser')
-    compile 'com.android.support:support-v4:21.0.3'
-    compile project(':CustomBrowser')
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.android.support:appcompat-v7:22.1.1'
 }
