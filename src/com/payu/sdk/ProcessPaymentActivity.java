@@ -100,6 +100,7 @@ public class ProcessPaymentActivity extends FragmentActivity {
                 e.printStackTrace();
                 finish();
             }
+            webView.setWebViewClient(new PayUWebViewClient(bank) {});
             webView.setWebChromeClient(new PayUWebChromeClient(bank) {});
         } catch (ClassNotFoundException e) {
             webView.getSettings().setSupportMultipleWindows(true);
