@@ -1,4 +1,4 @@
-### Android SDK v4.3.4
+### Android SDK v4.3.5
 
 Please refer to the integration document for integrating the SDK with your app.
 
